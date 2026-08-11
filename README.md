@@ -12,6 +12,7 @@
 - 支持 Markdown 表格转 PPT 表格
 - 使用中文字体和统一主题样式
 - 支持自定义页脚文字
+- 支持网页粘贴或上传 Markdown 后生成 PPT
 - 导出 `.pptx` 文件
 
 ## 快速开始
@@ -22,16 +23,28 @@
 pip install -r requirements.txt
 ```
 
-生成示例 PPT：
+命令行生成示例 PPT：
 
 ```bash
 python main.py inputs/example.md outputs/example.pptx
 ```
 
-生成带自定义页脚的 PPT：
+命令行生成带自定义页脚的 PPT：
 
 ```bash
 python main.py inputs/example.md outputs/example.pptx --footer "我的PPT生成项目"
+```
+
+启动网页界面：
+
+```bash
+python app.py
+```
+
+打开浏览器访问：
+
+```text
+http://127.0.0.1:5000
 ```
 
 ## Markdown 写法
@@ -65,6 +78,7 @@ python main.py inputs/example.md outputs/example.pptx --footer "我的PPT生成�
 
 ```text
 ppt-generator/
+|-- app.py
 |-- main.py
 |-- requirements.txt
 |-- inputs/
@@ -81,5 +95,5 @@ ppt-generator/
 ## 后续计划
 
 - 支持更多主题模板
-- 增加网页上传生成入口
 - 支持 Word 文档转 PPT
+- 增加图片文件一并上传
