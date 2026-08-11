@@ -6,7 +6,8 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
-from .markdown_parser import Deck, ImageAsset, Table
+from .markdown_parser import Deck, ImageAsset, MermaidDiagram, Table
+from .mermaid_renderer import MermaidRenderError, render_mermaid
 from .theme import DEFAULT_THEME, Theme, get_theme
 
 
@@ -36,8 +37,10 @@ def build_presentation(
             slide.bullets,
             slide.images,
             slide.tables,
+            slide.mermaid,
             slide.layout,
             image_base_dir or output_path.parent,
+            output_path.parent,
             theme,
             footer_text,
         )
@@ -81,8 +84,10 @@ def _add_content_slide(
     bullets: list[str],
     images: list[ImageAsset],
     tables: list[Table],
+    mermaid: list[MermaidDiagram],
     layout: str,
     image_base_dir: Path,
+    work_dir: Path,
     theme: Theme,
     footer_text: str,
 ) -> None:
@@ -90,7 +95,12 @@ def _add_content_slide(
     _add_background(slide, theme.slide_background)
     _add_slide_title(slide, title, theme)
 
-    content_layout = _resolve_layout(layout, images, tables)
+    content_layout = _resolve_layout(layout, images, tables, mermaid)
+    if mermaid:
+        _add_mermaid_diagrams(slide, mermaid, work_dir, content_layout, theme)
+        _add_footer(slide, footer_text, theme)
+        return
+
     if content_layout == "image-full":
         _add_images(slide, images, image_base_dir, content_layout, theme)
         _add_footer(slide, footer_text, theme)
@@ -136,7 +146,7 @@ def _add_slide_title(slide, title: str, theme: Theme) -> None:
     run.font.color.rgb = theme.title_color
 
 
-def _resolve_layout(layout: str, images: list[ImageAsset], tables: list[Table]) -> str:
+def _resolve_layout(layout: str, images: list[ImageAsset], tables: list[Table], mermaid: list[MermaidDiagram] | None = None) -> str:
     allowed = {
         "auto",
         "text",
@@ -149,10 +159,13 @@ def _resolve_layout(layout: str, images: list[ImageAsset], tables: list[Table]) 
         "timeline",
         "metrics",
         "summary",
+        "diagram",
     }
     layout = layout if layout in allowed else "auto"
     if layout != "auto":
         return layout
+    if mermaid:
+        return "diagram"
     if tables and not images:
         return "full-table"
     if images and not tables:
@@ -420,6 +433,30 @@ def _add_images(slide, images: list[ImageAsset], base_dir: Path, layout: str, th
             run = p.runs[0]
             run.font.size = Pt(10)
             run.font.color.rgb = RGBColor(100, 116, 139)
+
+
+def _add_mermaid_diagrams(slide, diagrams: list[MermaidDiagram], work_dir: Path, layout: str, theme: Theme) -> None:
+    slots = _diagram_slots(len(diagrams), layout)
+    render_dir = work_dir / "mermaid"
+    for diagram, slot in zip(diagrams, slots):
+        try:
+            image_path = render_mermaid(diagram.code, render_dir)
+        except MermaidRenderError as exc:
+            raise ValueError(str(exc)) from exc
+        _add_image_panel(slide, slot, theme)
+        picture = slide.shapes.add_picture(str(image_path), slot["left"], slot["top"])
+        _fit_picture(picture, slot["width"], slot["height"])
+        picture.left = slot["left"] + int((slot["width"] - picture.width) / 2)
+        picture.top = slot["top"] + int((slot["height"] - picture.height) / 2)
+
+
+def _diagram_slots(count: int, layout: str) -> list[dict[str, int]]:
+    if count <= 1 or layout == "diagram":
+        return [{"left": Inches(1.25), "top": Inches(1.65), "width": Inches(10.85), "height": Inches(4.85)}]
+    return [
+        {"left": Inches(0.9), "top": Inches(1.7), "width": Inches(5.55), "height": Inches(4.7)},
+        {"left": Inches(6.9), "top": Inches(1.7), "width": Inches(5.55), "height": Inches(4.7)},
+    ]
 
 
 def _image_slots(count: int, layout: str) -> list[dict[str, int]]:

@@ -32,6 +32,21 @@ footer: PPT Generator
 - 支持 WPS 文档
 - 增加可视化模板
 
+<!-- layout: diagram -->
+## 生成流程图
+
+```mermaid
+flowchart LR
+  A[上传文件] --> B[解析内容]
+  B --> C{内容类型}
+  C -->|Markdown| D[生成页面结构]
+  C -->|WPS/Word| E[转换并解析]
+  C -->|图片| F[图片展示页]
+  D --> G[导出PPT]
+  E --> G
+  F --> G
+```
+
 <!-- layout: metrics -->
 ## 项目指标
 

@@ -21,6 +21,7 @@
 - 支持顶部配置 `title`、`subtitle`、`theme`、`footer`
 - 支持页面布局指令：`text`、`image-right`、`image-left`、`full-table`
 - 支持可视化模板：`cards`、`compare`、`timeline`、`metrics`、`summary`
+- 支持 Mermaid 流程图、关系图渲染到 PPT
 - 支持网页上传、粘贴内容、选择主题、自定义导出文件名
 - 支持生成前预览 PPT 结构
 - 支持多张图片上传，并自动生成图片展示型 PPT
@@ -32,6 +33,7 @@
 
 ```bash
 pip install -r requirements.txt
+npm install
 ```
 
 命令行生成：
@@ -131,6 +133,7 @@ footer: PPT Generator
 - `timeline`：时间轴页
 - `metrics`：指标数据页
 - `summary`：总结清单页
+- `diagram`：Mermaid 图表页
 - `auto`：自动判断
 
 ## 可视化模板写法
@@ -193,6 +196,29 @@ footer: PPT Generator
 - 已支持生成前预览
 ```
 
+## Mermaid 图表
+
+Markdown 中可以直接写 Mermaid 代码块：
+
+````markdown
+<!-- layout: diagram -->
+## 生成流程图
+
+```mermaid
+flowchart LR
+  A[上传文件] --> B[解析内容]
+  B --> C[生成PPT]
+```
+````
+
+说明：
+
+- 程序会优先使用本机 `mmdc` 渲染。
+- 执行 `npm install` 后，项目会安装本地 Mermaid CLI。
+- 如果没有本地 `mmdc`，会尝试使用 Kroki 在线服务渲染。
+- Mermaid CLI 需要本机有可用的 Chrome / Edge 浏览器环境。
+- 如果图表无法渲染，请检查 Mermaid 语法，确认已执行 `npm install`，并确认浏览器可用。
+
 ## 图片生成 PPT
 
 网页中可以直接多选上传图片：
@@ -237,5 +263,4 @@ ppt-generator/
 ## 后续计划
 
 - 支持代码块高亮
-- 支持 Mermaid 图表
 - 增加 API 文档和 Docker 部署

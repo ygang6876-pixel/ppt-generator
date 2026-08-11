@@ -1,0 +1,8 @@
+{
+  "name": "ppt-generator",
+  "private": true,
+  "version": "0.1.0",
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.4.2"
+  }
+}

@@ -19,12 +19,18 @@ class Table:
 
 
 @dataclass
+class MermaidDiagram:
+    code: str
+
+
+@dataclass
 class Slide:
     title: str
     bullets: list[str] = field(default_factory=list)
     body: list[str] = field(default_factory=list)
     images: list[ImageAsset] = field(default_factory=list)
     tables: list[Table] = field(default_factory=list)
+    mermaid: list[MermaidDiagram] = field(default_factory=list)
     layout: str = "auto"
 
 
@@ -81,6 +87,16 @@ def parse_markdown(markdown: str) -> Deck:
             index += 1
             continue
 
+        mermaid = _parse_mermaid_at(lines, index)
+        if mermaid is not None:
+            if current is None:
+                current = Slide(title="\u5185\u5bb9", layout=pending_layout)
+                pending_layout = "auto"
+                slides.append(current)
+            current.mermaid.append(mermaid)
+            index += len(mermaid.code.splitlines()) + 2
+            continue
+
         table = _parse_table_at(lines, index)
         if table is not None:
             if current is None:
@@ -125,6 +141,20 @@ def parse_markdown(markdown: str) -> Deck:
         slides.append(Slide(title="\u5185\u5bb9", body=[subtitle], layout=pending_layout))
 
     return Deck(title=title, subtitle=subtitle, slides=slides, metadata=metadata)
+
+
+def _parse_mermaid_at(lines: list[str], index: int) -> MermaidDiagram | None:
+    if lines[index].lower() != "```mermaid":
+        return None
+    code_lines: list[str] = []
+    row_index = index + 1
+    while row_index < len(lines):
+        if lines[row_index] == "```":
+            code = "\n".join(code_lines).strip()
+            return MermaidDiagram(code=code) if code else None
+        code_lines.append(lines[row_index])
+        row_index += 1
+    return None
 
 
 def _extract_front_matter(markdown: str) -> tuple[dict[str, str], str]:

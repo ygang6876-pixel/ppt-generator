@@ -472,6 +472,8 @@ def _preview_deck(deck: Deck) -> dict:
             meta_parts.append(f"\u56fe\u7247 {len(slide.images)}")
         if slide.tables:
             meta_parts.append(f"\u8868\u683c {len(slide.tables)}")
+        if slide.mermaid:
+            meta_parts.append(f"Mermaid {len(slide.mermaid)}")
         slides.append(
             {
                 "index": index,
