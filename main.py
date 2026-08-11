@@ -20,7 +20,7 @@ def main() -> None:
 
     deck = parse_markdown(input_path.read_text(encoding="utf-8"))
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    build_presentation(deck, output_path, footer_text=args.footer)
+    build_presentation(deck, output_path, image_base_dir=input_path.parent, footer_text=args.footer)
 
     print(f"Created {output_path}")
 

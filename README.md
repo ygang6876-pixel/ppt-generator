@@ -10,6 +10,7 @@
 - 将普通段落和列表转换为 PPT 内容
 - 使用中文字体和统一主题样式
 - 支持自定义页脚文字
+- 支持 Markdown 图片插入
 - 导出 `.pptx` 文件
 
 ## 快速开始
@@ -47,6 +48,8 @@ python main.py inputs/example.md outputs/example.pptx --footer "我的PPT生成�
 ## 第二页标题
 
 这里是一段正文。
+
+![图片说明](images/demo.png)
 ```
 
 ## 项目结构
@@ -66,7 +69,6 @@ ppt-generator/
 
 ## 后续计划
 
-- 支持图片插入
 - 支持表格转 PPT
 - 支持更多主题模板
 - 增加网页上传生成入口

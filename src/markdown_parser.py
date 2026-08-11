@@ -1,4 +1,14 @@
 from dataclasses import dataclass, field
+import re
+
+
+IMAGE_PATTERN = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<path>[^)]+)\)")
+
+
+@dataclass
+class ImageAsset:
+    alt: str
+    path: str
 
 
 @dataclass
@@ -6,6 +16,7 @@ class Slide:
     title: str
     bullets: list[str] = field(default_factory=list)
     body: list[str] = field(default_factory=list)
+    images: list[ImageAsset] = field(default_factory=list)
 
 
 @dataclass
@@ -42,6 +53,19 @@ def parse_markdown(markdown: str) -> Deck:
         if line.startswith("## "):
             current = Slide(title=line[3:].strip())
             slides.append(current)
+            continue
+
+        image_match = IMAGE_PATTERN.fullmatch(line)
+        if image_match:
+            if current is None:
+                current = Slide(title="内容")
+                slides.append(current)
+            current.images.append(
+                ImageAsset(
+                    alt=image_match.group("alt").strip(),
+                    path=image_match.group("path").strip(),
+                )
+            )
             continue
 
         if line.startswith(("- ", "* ")):
