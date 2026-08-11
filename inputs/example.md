@@ -1,7 +1,7 @@
 ---
 title: PPT 生成项目演示
-subtitle: 根据 Markdown、WPS 文档自动生成 PowerPoint
-theme: clean
+subtitle: 根据 Markdown、WPS 文档和图片自动生成 PowerPoint
+theme: tech
 footer: PPT Generator
 ---
 
@@ -9,12 +9,36 @@ footer: PPT Generator
 
 根据 Markdown 自动生成可编辑 PowerPoint。
 
-## 项目目标
+<!-- layout: cards -->
+## 三栏卡片
 
-- 输入 Markdown、文本提纲或 WPS/Word 文档
-- 自动拆分为 PPT 页面
-- 支持主题、图片、表格和布局控制
-- 导出可编辑的 `.pptx` 文件
+- 文档上传
+- 图片生成
+- 主题美化
+
+<!-- layout: compare -->
+## 对比页面
+
+- 命令行生成，适合批量处理
+- 支持脚本自动化
+- 网页生成，适合普通用户
+- 支持上传和预览
+
+<!-- layout: timeline -->
+## 项目路线
+
+- 创建仓库
+- 支持 Markdown
+- 支持 WPS 文档
+- 增加可视化模板
+
+<!-- layout: metrics -->
+## 项目指标
+
+- 8: 内置主题
+- 5: 可视化模板
+- 6: 上传格式
+- 2: 使用入口
 
 <!-- layout: image-right -->
 ## 图片页面
@@ -35,3 +59,11 @@ footer: PPT Generator
 | 图片页 | 已完成 | 支持 Markdown 图片 |
 | 表格页 | 已完成 | 支持 Markdown 表格 |
 | 文档上传 | 已完成 | 支持 docx/doc/wps 尝试转换 |
+
+<!-- layout: summary -->
+## 总结页面
+
+- 已支持多种输入来源
+- 已支持主题和模板
+- 已支持生成前预览
+- 下一步可继续支持代码高亮和 Mermaid 图表

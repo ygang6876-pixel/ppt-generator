@@ -95,6 +95,10 @@ def _add_content_slide(
         _add_images(slide, images, image_base_dir, content_layout, theme)
         _add_footer(slide, footer_text, theme)
         return
+    if content_layout in {"cards", "compare", "timeline", "metrics", "summary"}:
+        _add_visual_layout(slide, content_layout, body, bullets, theme)
+        _add_footer(slide, footer_text, theme)
+        return
 
     text_left, text_top, text_width, text_height = _text_box_rect(content_layout, bool(tables))
     _add_text_content(slide, body, bullets, text_left, text_top, text_width, text_height, theme)
@@ -133,7 +137,19 @@ def _add_slide_title(slide, title: str, theme: Theme) -> None:
 
 
 def _resolve_layout(layout: str, images: list[ImageAsset], tables: list[Table]) -> str:
-    allowed = {"auto", "text", "image-right", "image-left", "image-full", "full-table"}
+    allowed = {
+        "auto",
+        "text",
+        "image-right",
+        "image-left",
+        "image-full",
+        "full-table",
+        "cards",
+        "compare",
+        "timeline",
+        "metrics",
+        "summary",
+    }
     layout = layout if layout in allowed else "auto"
     if layout != "auto":
         return layout
@@ -181,6 +197,149 @@ def _add_text_content(slide, body: list[str], bullets: list[str], left: int, top
         run.font.size = Pt(21)
         run.font.name = theme.body_font
         run.font.color.rgb = theme.body_color
+
+
+def _add_visual_layout(slide, layout: str, body: list[str], bullets: list[str], theme: Theme) -> None:
+    items = [*body, *bullets] or [" "]
+    if layout == "cards":
+        _add_cards_layout(slide, items, theme)
+    elif layout == "compare":
+        _add_compare_layout(slide, items, theme)
+    elif layout == "timeline":
+        _add_timeline_layout(slide, items, theme)
+    elif layout == "metrics":
+        _add_metrics_layout(slide, items, theme)
+    elif layout == "summary":
+        _add_summary_layout(slide, items, theme)
+
+
+def _add_cards_layout(slide, items: list[str], theme: Theme) -> None:
+    lefts = [Inches(0.8), Inches(4.65), Inches(8.5)]
+    for index, item in enumerate(_pad_items(items, 3)[:3]):
+        panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, lefts[index], Inches(1.75), Inches(3.25), Inches(4.55))
+        panel.fill.solid()
+        panel.fill.fore_color.rgb = theme.subtle_fill
+        panel.line.color.rgb = theme.accent_color
+        _add_box_text(
+            slide,
+            f"{index + 1:02d}",
+            lefts[index] + Inches(0.25),
+            Inches(2.05),
+            Inches(0.8),
+            Inches(0.42),
+            theme,
+            Pt(18),
+            bold=True,
+            color=theme.accent_color,
+        )
+        _add_box_text(slide, item, lefts[index] + Inches(0.25), Inches(2.8), Inches(2.75), Inches(2.4), theme, Pt(20), bold=True)
+
+
+def _add_compare_layout(slide, items: list[str], theme: Theme) -> None:
+    groups = _split_items(items, 2)
+    labels = ["方案 A", "方案 B"]
+    lefts = [Inches(0.9), Inches(6.85)]
+    for index, group in enumerate(groups):
+        panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, lefts[index], Inches(1.7), Inches(5.45), Inches(4.75))
+        panel.fill.solid()
+        panel.fill.fore_color.rgb = theme.subtle_fill
+        panel.line.color.rgb = theme.accent_color if index == 0 else theme.table_header
+        _add_box_text(slide, labels[index], lefts[index] + Inches(0.25), Inches(1.95), Inches(4.9), Inches(0.5), theme, Pt(22), bold=True, color=theme.title_color)
+        _add_box_text(slide, "\n".join(f"- {item}" for item in group), lefts[index] + Inches(0.35), Inches(2.8), Inches(4.75), Inches(2.9), theme, Pt(17))
+
+
+def _add_timeline_layout(slide, items: list[str], theme: Theme) -> None:
+    visible = _pad_items(items, 4)[:4]
+    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.2), Inches(3.58), Inches(10.9), Inches(0.05))
+    line.fill.solid()
+    line.fill.fore_color.rgb = theme.accent_color
+    line.line.color.rgb = theme.accent_color
+    for index, item in enumerate(visible):
+        x = Inches(1.25 + index * 2.85)
+        marker = slide.shapes.add_shape(MSO_SHAPE.OVAL, x, Inches(3.25), Inches(0.65), Inches(0.65))
+        marker.fill.solid()
+        marker.fill.fore_color.rgb = theme.accent_color
+        marker.line.color.rgb = theme.accent_color
+        _add_box_text(slide, str(index + 1), x, Inches(3.38), Inches(0.65), Inches(0.3), theme, Pt(13), bold=True, color=RGBColor(255, 255, 255), align=PP_ALIGN.CENTER)
+        _add_box_text(slide, item, x - Inches(0.55), Inches(4.25), Inches(1.75), Inches(1.3), theme, Pt(15), bold=True, align=PP_ALIGN.CENTER)
+
+
+def _add_metrics_layout(slide, items: list[str], theme: Theme) -> None:
+    positions = [
+        (Inches(0.9), Inches(1.8)),
+        (Inches(6.8), Inches(1.8)),
+        (Inches(0.9), Inches(4.15)),
+        (Inches(6.8), Inches(4.15)),
+    ]
+    for index, item in enumerate(_pad_items(items, 4)[:4]):
+        value, label = _split_metric(item)
+        left, top = positions[index]
+        panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, Inches(5.45), Inches(1.65))
+        panel.fill.solid()
+        panel.fill.fore_color.rgb = theme.subtle_fill
+        panel.line.color.rgb = theme.accent_color
+        _add_box_text(slide, value, left + Inches(0.28), top + Inches(0.22), Inches(4.9), Inches(0.55), theme, Pt(27), bold=True, color=theme.accent_color)
+        _add_box_text(slide, label, left + Inches(0.3), top + Inches(0.95), Inches(4.8), Inches(0.42), theme, Pt(15), color=theme.body_color)
+
+
+def _add_summary_layout(slide, items: list[str], theme: Theme) -> None:
+    for index, item in enumerate(items[:6]):
+        top = Inches(1.65 + index * 0.75)
+        badge = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(1.0), top, Inches(0.34), Inches(0.34))
+        badge.fill.solid()
+        badge.fill.fore_color.rgb = theme.accent_color
+        badge.line.color.rgb = theme.accent_color
+        _add_box_text(slide, item, Inches(1.55), top - Inches(0.03), Inches(10.3), Inches(0.48), theme, Pt(19), bold=index == 0)
+
+
+def _add_box_text(
+    slide,
+    text: str,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+    theme: Theme,
+    size: Pt,
+    bold: bool = False,
+    color: RGBColor | None = None,
+    align=PP_ALIGN.LEFT,
+) -> None:
+    box = slide.shapes.add_textbox(left, top, width, height)
+    frame = box.text_frame
+    frame.word_wrap = True
+    frame.clear()
+    p = frame.paragraphs[0]
+    p.text = text
+    p.alignment = align
+    run = p.runs[0]
+    run.font.size = size
+    run.font.bold = bold
+    run.font.name = theme.body_font
+    run.font.color.rgb = color or theme.body_color
+
+
+def _pad_items(items: list[str], count: int) -> list[str]:
+    padded = items[:]
+    while len(padded) < count:
+        padded.append("待补充")
+    return padded
+
+
+def _split_items(items: list[str], groups: int) -> list[list[str]]:
+    midpoint = max(1, (len(items) + groups - 1) // groups)
+    return [items[index * midpoint : (index + 1) * midpoint] or ["待补充"] for index in range(groups)]
+
+
+def _split_metric(item: str) -> tuple[str, str]:
+    for separator in [":", "：", "|"]:
+        if separator in item:
+            first, second = item.split(separator, 1)
+            return first.strip(), second.strip()
+    parts = item.split(maxsplit=1)
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    return item, "指标说明"
 
 
 def _add_table(slide, table_data: Table, left: int, top: int, width: int, height: int, theme: Theme) -> None:

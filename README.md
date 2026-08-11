@@ -20,6 +20,7 @@
 - 支持 Markdown 表格转可编辑 PPT 表格
 - 支持顶部配置 `title`、`subtitle`、`theme`、`footer`
 - 支持页面布局指令：`text`、`image-right`、`image-left`、`full-table`
+- 支持可视化模板：`cards`、`compare`、`timeline`、`metrics`、`summary`
 - 支持网页上传、粘贴内容、选择主题、自定义导出文件名
 - 支持生成前预览 PPT 结构
 - 支持多张图片上传，并自动生成图片展示型 PPT
@@ -125,7 +126,72 @@ footer: PPT Generator
 - `image-left`：左图片、右文字
 - `image-full`：大图展示页
 - `full-table`：大表格页面
+- `cards`：三栏卡片页
+- `compare`：左右对比页
+- `timeline`：时间轴页
+- `metrics`：指标数据页
+- `summary`：总结清单页
 - `auto`：自动判断
+
+## 可视化模板写法
+
+三栏卡片：
+
+```markdown
+<!-- layout: cards -->
+## 三栏卡片
+
+- 文档上传
+- 图片生成
+- 主题美化
+```
+
+左右对比：
+
+```markdown
+<!-- layout: compare -->
+## 对比页面
+
+- 命令行生成
+- 适合批量处理
+- 网页生成
+- 适合普通用户
+```
+
+时间轴：
+
+```markdown
+<!-- layout: timeline -->
+## 项目路线
+
+- 创建仓库
+- 支持 Markdown
+- 支持 WPS 文档
+- 增加可视化模板
+```
+
+指标页：
+
+```markdown
+<!-- layout: metrics -->
+## 项目指标
+
+- 8: 内置主题
+- 5: 可视化模板
+- 6: 上传格式
+- 2: 使用入口
+```
+
+总结页：
+
+```markdown
+<!-- layout: summary -->
+## 总结页面
+
+- 已支持多种输入来源
+- 已支持主题和模板
+- 已支持生成前预览
+```
 
 ## 图片生成 PPT
 
@@ -170,7 +236,6 @@ ppt-generator/
 
 ## 后续计划
 
-- 增加更多可视化模板
 - 支持代码块高亮
 - 支持 Mermaid 图表
 - 增加 API 文档和 Docker 部署
