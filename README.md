@@ -6,8 +6,10 @@
 
 - 读取 Markdown 文件
 - 将一级标题作为封面标题
-- 将二级标题拆成独立内容页
+- 将二级标题拆分成独立内容页
 - 将普通段落和列表转换为 PPT 内容
+- 使用中文字体和统一主题样式
+- 支持自定义页脚文字
 - 导出 `.pptx` 文件
 
 ## 快速开始
@@ -24,10 +26,18 @@ pip install -r requirements.txt
 python main.py inputs/example.md outputs/example.pptx
 ```
 
+生成带自定义页脚的 PPT：
+
+```bash
+python main.py inputs/example.md outputs/example.pptx --footer "我的PPT生成项目"
+```
+
 ## Markdown 写法
 
 ```markdown
 # 演示标题
+
+这里会作为封面副标题。
 
 ## 第一页标题
 
@@ -43,13 +53,20 @@ python main.py inputs/example.md outputs/example.pptx
 
 ```text
 ppt-generator/
-├─ main.py
-├─ requirements.txt
-├─ inputs/
-│  └─ example.md
-├─ outputs/
-└─ src/
-   ├─ markdown_parser.py
-   └─ ppt_builder.py
+|-- main.py
+|-- requirements.txt
+|-- inputs/
+|   `-- example.md
+|-- outputs/
+`-- src/
+    |-- markdown_parser.py
+    |-- ppt_builder.py
+    `-- theme.py
 ```
-一个根据文本、Markdown或提纲自动生成PPT的项目
+
+## 后续计划
+
+- 支持图片插入
+- 支持表格转 PPT
+- 支持更多主题模板
+- 增加网页上传生成入口
