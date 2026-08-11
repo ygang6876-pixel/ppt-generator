@@ -9,8 +9,9 @@ from docx.oxml.ns import qn
 from docx.table import Table as DocxTable
 from docx.text.paragraph import Paragraph
 
-from .content_distiller import distill_slide_items, summarize_table_for_report
+from .content_distiller import distill_slide_items
 from .markdown_parser import Deck, ImageAsset, Slide, Table
+from .table_planner import plan_table_for_report
 
 
 MAX_TEXT_ITEMS_PER_SLIDE = 6
@@ -431,17 +432,16 @@ def _style_report_slide(slide: Slide) -> Slide:
     if slide.tables:
         table = slide.tables[0]
         if _is_complex_table(table):
-            body, bullets = summarize_table_for_report(table.headers, table.rows)
-            layout = "checklist"
+            table_plan = plan_table_for_report(title, table)
             return Slide(
                 title=title,
-                body=body,
-                bullets=bullets,
+                body=table_plan.body,
+                bullets=table_plan.bullets,
                 images=[],
-                tables=[],
+                tables=table_plan.tables,
                 mermaid=slide.mermaid,
                 code_blocks=slide.code_blocks,
-                layout=layout,
+                layout=table_plan.layout,
             )
         layout = "full-table"
     elif slide.images:

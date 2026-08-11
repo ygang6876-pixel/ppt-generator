@@ -531,6 +531,10 @@ def _add_table(slide, table_data: Table, left: int, top: int, width: int, height
     col_count = len(headers)
     table_shape = slide.shapes.add_table(row_count, col_count, left, top, width, height)
     table = table_shape.table
+    for column in table.columns:
+        column.width = int(width / col_count)
+    for row in table.rows:
+        row.height = int(height / row_count)
 
     for col_idx, header in enumerate(headers):
         _set_cell(table.cell(0, col_idx), _short_text(header, 18), theme, is_header=True, dense=col_count > 5)
@@ -558,9 +562,18 @@ def _set_cell(cell, text: str, theme: Theme, is_header: bool, dense: bool = Fals
         paragraph.alignment = PP_ALIGN.CENTER
         for run in paragraph.runs:
             run.font.name = theme.body_font
-            run.font.size = Pt(10 if dense else (12 if is_header else 11))
+            run.font.size = _table_font_size(text, is_header, dense)
             run.font.bold = is_header
             run.font.color.rgb = RGBColor(255, 255, 255) if is_header else theme.body_color
+
+
+def _table_font_size(text: str, is_header: bool, dense: bool) -> Pt:
+    base_size = 10 if dense else (12 if is_header else 11)
+    if len(text) > 28:
+        base_size -= 2
+    elif len(text) > 18:
+        base_size -= 1
+    return Pt(max(8, base_size))
 
 
 def _add_footer(slide, footer_text: str, theme: Theme) -> None:
