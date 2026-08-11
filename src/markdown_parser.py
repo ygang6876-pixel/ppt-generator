@@ -3,6 +3,7 @@ import re
 
 
 IMAGE_PATTERN = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<path>[^)]+)\)")
+LAYOUT_PATTERN = re.compile(r"<!--\s*layout:\s*(?P<layout>[a-zA-Z0-9_-]+)\s*-->")
 
 
 @dataclass
@@ -24,6 +25,7 @@ class Slide:
     body: list[str] = field(default_factory=list)
     images: list[ImageAsset] = field(default_factory=list)
     tables: list[Table] = field(default_factory=list)
+    layout: str = "auto"
 
 
 @dataclass
@@ -31,19 +33,28 @@ class Deck:
     title: str
     subtitle: str
     slides: list[Slide]
+    metadata: dict[str, str] = field(default_factory=dict)
 
 
 def parse_markdown(markdown: str) -> Deck:
-    title = "Untitled Presentation"
-    subtitle = "Generated from Markdown"
+    metadata, content = _extract_front_matter(markdown)
+    title = metadata.get("title", "Untitled Presentation")
+    subtitle = metadata.get("subtitle", "Generated from Markdown")
     slides: list[Slide] = []
     current: Slide | None = None
-    lines = [line.strip() for line in markdown.splitlines()]
+    pending_layout = "auto"
+    lines = [line.strip() for line in content.splitlines()]
     index = 0
 
     while index < len(lines):
         line = lines[index]
         if not line:
+            index += 1
+            continue
+
+        layout_match = LAYOUT_PATTERN.fullmatch(line)
+        if layout_match:
+            pending_layout = layout_match.group("layout").strip().lower() or "auto"
             index += 1
             continue
 
@@ -55,7 +66,8 @@ def parse_markdown(markdown: str) -> Deck:
         if line.startswith("### "):
             text = line[4:].strip()
             if current is None:
-                current = Slide(title=text)
+                current = Slide(title=text, layout=pending_layout)
+                pending_layout = "auto"
                 slides.append(current)
             else:
                 current.body.append(text)
@@ -63,7 +75,8 @@ def parse_markdown(markdown: str) -> Deck:
             continue
 
         if line.startswith("## "):
-            current = Slide(title=line[3:].strip())
+            current = Slide(title=line[3:].strip(), layout=pending_layout)
+            pending_layout = "auto"
             slides.append(current)
             index += 1
             continue
@@ -71,7 +84,8 @@ def parse_markdown(markdown: str) -> Deck:
         table = _parse_table_at(lines, index)
         if table is not None:
             if current is None:
-                current = Slide(title="内容")
+                current = Slide(title="内容", layout=pending_layout)
+                pending_layout = "auto"
                 slides.append(current)
             current.tables.append(table)
             index += len(table.rows) + 2
@@ -80,7 +94,8 @@ def parse_markdown(markdown: str) -> Deck:
         image_match = IMAGE_PATTERN.fullmatch(line)
         if image_match:
             if current is None:
-                current = Slide(title="内容")
+                current = Slide(title="内容", layout=pending_layout)
+                pending_layout = "auto"
                 slides.append(current)
             current.images.append(
                 ImageAsset(
@@ -93,7 +108,8 @@ def parse_markdown(markdown: str) -> Deck:
 
         if line.startswith(("- ", "* ")):
             if current is None:
-                current = Slide(title="内容")
+                current = Slide(title="内容", layout=pending_layout)
+                pending_layout = "auto"
                 slides.append(current)
             current.bullets.append(line[2:].strip())
             index += 1
@@ -106,9 +122,24 @@ def parse_markdown(markdown: str) -> Deck:
         index += 1
 
     if not slides:
-        slides.append(Slide(title="内容", body=[subtitle]))
+        slides.append(Slide(title="内容", body=[subtitle], layout=pending_layout))
 
-    return Deck(title=title, subtitle=subtitle, slides=slides)
+    return Deck(title=title, subtitle=subtitle, slides=slides, metadata=metadata)
+
+
+def _extract_front_matter(markdown: str) -> tuple[dict[str, str], str]:
+    lines = markdown.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}, markdown
+
+    metadata: dict[str, str] = {}
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            return metadata, "\n".join(lines[index + 1 :])
+        if ":" in line:
+            key, value = line.split(":", 1)
+            metadata[key.strip().lower()] = value.strip().strip('"').strip("'")
+    return metadata, markdown
 
 
 def _parse_table_at(lines: list[str], index: int) -> Table | None:

@@ -1,20 +1,27 @@
 # PPT Generator
 
-一个根据 Markdown 或文本提纲自动生成 PowerPoint 文件的项目。
+一个根据 Markdown、文本提纲、WPS/Word 文档自动生成可编辑 PowerPoint 的项目。
+
+## 设计参考
+
+本项目参考了几个成熟开源项目的优点：
+
+- Presenton：网页上传文档、生成可编辑 PPT、支持模板和本地部署。
+- Slidev：Markdown 优先、主题化、开发体验友好。
+- Marp：顶部配置、主题体系、Markdown 到多格式导出。
+- md2pptx：命令行简洁、支持模板/元数据、重视文档说明。
 
 ## 当前功能
 
-- 读取 Markdown 文件
-- 将一级标题作为封面标题
-- 将二级标题拆分成独立内容页
-- 将普通段落和列表转换为 PPT 内容
-- 支持 Markdown 图片插入
-- 支持 Markdown 表格转 PPT 表格
-- 支持上传 WPS/Word `.docx` 文档生成 PPT
-- 使用中文字体和统一主题样式
-- 支持自定义页脚文字
-- 支持网页粘贴或上传文件后生成 PPT
-- 导出 `.pptx` 文件
+- Markdown 转 `.pptx`
+- WPS/Word `.docx` 转 `.pptx`
+- 尝试自动转换 `.doc`、`.wps` 后生成 PPT
+- 支持 Markdown 图片
+- 支持 Markdown 表格转可编辑 PPT 表格
+- 支持顶部配置 `title`、`subtitle`、`theme`、`footer`
+- 支持页面布局指令：`text`、`image-right`、`image-left`、`full-table`
+- 支持网页上传、粘贴内容、选择主题、自定义导出文件名
+- 支持命令行生成
 
 ## 快速开始
 
@@ -24,64 +31,93 @@
 pip install -r requirements.txt
 ```
 
-命令行生成示例 PPT：
+命令行生成：
 
 ```bash
 python main.py inputs/example.md outputs/example.pptx
 ```
 
-命令行生成带自定义页脚的 PPT：
+指定主题和页脚：
 
 ```bash
-python main.py inputs/example.md outputs/example.pptx --footer "我的PPT生成项目"
+python main.py inputs/example.md outputs/example.pptx --theme clean --footer "我的PPT生成项目"
 ```
 
-启动网页界面：
+启动网页：
 
 ```bash
 python app.py
 ```
 
-打开浏览器访问：
+浏览器访问：
 
 ```text
 http://127.0.0.1:5000
 ```
 
-网页上传支持：
+## 网页上传
+
+支持：
 
 - Markdown：`.md`、`.markdown`、`.txt`
-- WPS/Word 文档：`.docx`
+- WPS/Word：`.docx`
 - 尝试自动转换：`.doc`、`.wps`
 
-说明：`.doc` 和 `.wps` 会先自动转换为 `.docx`，再生成 PPT。自动转换需要本机安装 LibreOffice，或安装 Microsoft Word 并具备 Windows 自动化能力；如果转换失败，请先在 WPS/Word 中另存为 `.docx` 后再上传。
+说明：`.doc` 和 `.wps` 会先自动转换为 `.docx`，再生成 PPT。自动转换需要本机安装 LibreOffice，或安装 Microsoft Word 并具备 Windows 自动化能力。如果转换失败，请先在 WPS/Word 中另存为 `.docx` 后再上传。
 
 ## Markdown 写法
 
 ```markdown
-# 演示标题
+---
+title: 项目汇报
+subtitle: 自动生成 PPT 示例
+theme: clean
+footer: PPT Generator
+---
 
-这里会作为封面副标题。
+# 项目汇报
 
-## 第一页标题
+这是封面副标题。
+
+## 项目目标
 
 - 要点一
 - 要点二
 
-## 第二页标题
+<!-- layout: image-right -->
+## 图片页面
 
-这里是一段正文。
+- 图片放在右侧
+- 文字放在左侧
 
 ![图片说明](images/demo.png)
 
-## 表格页
+<!-- layout: full-table -->
+## 表格页面
 
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
 | 标题页 | 已完成 | 自动生成封面 |
-| 内容页 | 已完成 | 支持段落和列表 |
-| 表格页 | 已完成 | Markdown 表格转 PPT 表格 |
+| 表格页 | 已完成 | 转为可编辑表格 |
 ```
+
+## 主题
+
+可选主题：
+
+- `business`：商务蓝色风格
+- `clean`：白底简洁风格
+- `dark`：深色演示风格
+
+## 布局
+
+可选布局：
+
+- `text`：纯文字内容
+- `image-right`：左文字、右图片
+- `image-left`：左图片、右文字
+- `full-table`：大表格页面
+- `auto`：自动判断
 
 ## 项目结构
 
@@ -92,10 +128,13 @@ ppt-generator/
 |-- requirements.txt
 |-- inputs/
 |   |-- example.md
+|   |-- docx_example.docx
 |   `-- images/
 |       `-- demo.png
 |-- outputs/
 `-- src/
+    |-- document_converter.py
+    |-- docx_parser.py
     |-- markdown_parser.py
     |-- ppt_builder.py
     `-- theme.py
@@ -103,5 +142,8 @@ ppt-generator/
 
 ## 后续计划
 
-- 支持更多主题模板
-- 增加图片文件一并上传
+- 增加更多可视化模板
+- 支持图片文件批量上传
+- 支持代码块高亮
+- 支持 Mermaid 图表
+- 增加 API 文档和 Docker 部署
