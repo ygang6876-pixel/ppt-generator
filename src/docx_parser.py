@@ -424,10 +424,24 @@ def _matches(slide: Slide, pattern: str) -> bool:
 
 def _style_report_slide(slide: Slide) -> Slide:
     title = _clean_report_title(slide.title)
-    body = [_shorten(item, 95) for item in slide.body[:4]]
-    bullets = [_shorten(item, 95) for item in slide.bullets[:5]]
+    body = [_shorten(item, 58) for item in slide.body[:3]]
+    bullets = [_shorten(item, 48) for item in slide.bullets[:4]]
     layout = slide.layout
     if slide.tables:
+        table = slide.tables[0]
+        if _is_complex_table(table):
+            body, bullets = _summarize_table(table)
+            layout = "checklist"
+            return Slide(
+                title=title,
+                body=body,
+                bullets=bullets,
+                images=[],
+                tables=[],
+                mermaid=slide.mermaid,
+                code_blocks=slide.code_blocks,
+                layout=layout,
+            )
         layout = "full-table"
     elif slide.images:
         layout = "blueprint" if _looks_like_drawing(title) else ("image-full" if len(slide.images) == 1 else "image-right")
@@ -461,3 +475,24 @@ def _clean_report_title(title: str) -> str:
 
 def _looks_like_drawing(title: str) -> bool:
     return bool(re.search(r"图|布置|示意|断面|设计|流程|网络|参数", title))
+
+
+def _is_complex_table(table: Table) -> bool:
+    return len(table.headers) > 6 or len(table.rows) > 8 or _table_text_length(table) > 520
+
+
+def _table_text_length(table: Table) -> int:
+    return sum(len(cell) for cell in table.headers) + sum(len(cell) for row in table.rows for cell in row)
+
+
+def _summarize_table(table: Table) -> tuple[list[str], list[str]]:
+    rows = len(table.rows)
+    cols = len(table.headers)
+    headers = "、".join(_shorten(header, 10) for header in table.headers[:6])
+    body = [f"源表格为 {rows} 行、{cols} 列；汇报版仅提取字段和代表性内容，避免压缩后失真。"]
+    bullets = [f"主要字段：{headers}"]
+    for row in table.rows[:3]:
+        values = [value for value in row[:3] if value]
+        if values:
+            bullets.append(_shorten(" / ".join(values), 56))
+    return body, bullets[:4]
