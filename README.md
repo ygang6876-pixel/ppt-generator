@@ -21,6 +21,7 @@
 - 支持顶部配置 `title`、`subtitle`、`theme`、`footer`
 - 支持页面布局指令：`text`、`image-right`、`image-left`、`full-table`
 - 支持网页上传、粘贴内容、选择主题、自定义导出文件名
+- 支持多张图片上传，并自动生成图片展示型 PPT
 - 支持命令行生成
 
 ## 快速开始
@@ -108,6 +109,11 @@ footer: PPT Generator
 - `business`：商务蓝色风格
 - `clean`：白底简洁风格
 - `dark`：深色演示风格
+- `midnight`：深夜青蓝风格
+- `emerald`：绿色清爽风格
+- `sunrise`：暖色汇报风格
+- `ivory`：纸感简洁风格
+- `tech`：科技蓝紫风格
 
 ## 布局
 
@@ -116,8 +122,17 @@ footer: PPT Generator
 - `text`：纯文字内容
 - `image-right`：左文字、右图片
 - `image-left`：左图片、右文字
+- `image-full`：大图展示页
 - `full-table`：大表格页面
 - `auto`：自动判断
+
+## 图片生成 PPT
+
+网页中可以直接多选上传图片：
+
+- 只上传图片：每张图片自动生成一页 PPT
+- 同时上传 Markdown 和图片：Markdown 中可以引用上传图片，例如 `![图片](demo.png)` 或 `![图片](images/demo.png)`
+- 图片会自动按比例缩放，并套用当前选择的主题样式
 
 ## 项目结构
 
@@ -143,7 +158,6 @@ ppt-generator/
 ## 后续计划
 
 - 增加更多可视化模板
-- 支持图片文件批量上传
 - 支持代码块高亮
 - 支持 Mermaid 图表
 - 增加 API 文档和 Docker 部署

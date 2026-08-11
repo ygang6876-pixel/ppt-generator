@@ -48,6 +48,7 @@ def build_presentation(
 def _add_title_slide(prs: Presentation, title: str, subtitle: str, theme: Theme) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     _add_background(slide, theme.cover_background)
+    _add_cover_accents(slide, theme)
 
     title_box = slide.shapes.add_textbox(Inches(0.9), Inches(2.1), Inches(11.6), Inches(1.0))
     title_frame = title_box.text_frame
@@ -90,6 +91,11 @@ def _add_content_slide(
     _add_slide_title(slide, title, theme)
 
     content_layout = _resolve_layout(layout, images, tables)
+    if content_layout == "image-full":
+        _add_images(slide, images, image_base_dir, content_layout, theme)
+        _add_footer(slide, footer_text, theme)
+        return
+
     text_left, text_top, text_width, text_height = _text_box_rect(content_layout, bool(tables))
     _add_text_content(slide, body, bullets, text_left, text_top, text_width, text_height, theme)
 
@@ -98,12 +104,17 @@ def _add_content_slide(
         _add_table(slide, tables[0], table_left, table_top, table_width, table_height, theme)
 
     if images:
-        _add_images(slide, images, image_base_dir, content_layout)
+        _add_images(slide, images, image_base_dir, content_layout, theme)
 
     _add_footer(slide, footer_text, theme)
 
 
 def _add_slide_title(slide, title: str, theme: Theme) -> None:
+    ribbon = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(0.16))
+    ribbon.fill.solid()
+    ribbon.fill.fore_color.rgb = theme.accent_color
+    ribbon.line.color.rgb = theme.accent_color
+
     accent = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(1.25), Inches(1.1), Inches(0.06))
     accent.fill.solid()
     accent.fill.fore_color.rgb = theme.accent_color
@@ -122,12 +133,14 @@ def _add_slide_title(slide, title: str, theme: Theme) -> None:
 
 
 def _resolve_layout(layout: str, images: list[ImageAsset], tables: list[Table]) -> str:
-    allowed = {"auto", "text", "image-right", "image-left", "full-table"}
+    allowed = {"auto", "text", "image-right", "image-left", "image-full", "full-table"}
     layout = layout if layout in allowed else "auto"
     if layout != "auto":
         return layout
     if tables and not images:
         return "full-table"
+    if images and not tables:
+        return "image-full" if len(images) == 1 else "image-right"
     if images:
         return "image-right"
     return "text"
@@ -223,9 +236,10 @@ def _add_background(slide, color: RGBColor) -> None:
     fill.fore_color.rgb = color
 
 
-def _add_images(slide, images: list[ImageAsset], base_dir: Path, layout: str) -> None:
+def _add_images(slide, images: list[ImageAsset], base_dir: Path, layout: str, theme: Theme) -> None:
     slots = _image_slots(len(images), layout)
     for image, slot in zip(images, slots):
+        _add_image_panel(slide, slot, theme)
         image_path = _resolve_image_path(image.path, base_dir)
         picture = slide.shapes.add_picture(str(image_path), slot["left"], slot["top"])
         _fit_picture(picture, slot["width"], slot["height"])
@@ -250,6 +264,8 @@ def _add_images(slide, images: list[ImageAsset], base_dir: Path, layout: str) ->
 
 
 def _image_slots(count: int, layout: str) -> list[dict[str, int]]:
+    if layout == "image-full":
+        return [{"left": Inches(0.85), "top": Inches(1.55), "width": Inches(11.65), "height": Inches(4.95)}]
     left = Inches(0.95) if layout == "image-left" else Inches(7.0)
     width = Inches(5.4)
     if count == 1:
@@ -267,14 +283,41 @@ def _resolve_image_path(image_path: str, base_dir: Path) -> Path:
 
     candidates = [
         base_dir / path,
+        base_dir / "images" / path,
         Path.cwd() / path,
         Path.cwd() / "inputs" / path,
+        Path.cwd() / "inputs" / "images" / path,
     ]
     for candidate in candidates:
         if candidate.exists():
             return candidate
 
     raise FileNotFoundError(f"Image file not found: {base_dir / path}")
+
+
+def _add_cover_accents(slide, theme: Theme) -> None:
+    top_bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(0.18))
+    top_bar.fill.solid()
+    top_bar.fill.fore_color.rgb = theme.accent_color
+    top_bar.line.color.rgb = theme.accent_color
+
+    block = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.65), Inches(5.85), Inches(2.1), Inches(0.16))
+    block.fill.solid()
+    block.fill.fore_color.rgb = theme.accent_color
+    block.line.color.rgb = theme.accent_color
+
+
+def _add_image_panel(slide, slot: dict[str, int], theme: Theme) -> None:
+    panel = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        slot["left"] - Inches(0.08),
+        slot["top"] - Inches(0.08),
+        slot["width"] + Inches(0.16),
+        slot["height"] + Inches(0.16),
+    )
+    panel.fill.solid()
+    panel.fill.fore_color.rgb = theme.subtle_fill
+    panel.line.color.rgb = theme.accent_color
 
 
 def _fit_picture(picture, max_width: int, max_height: int) -> None:
