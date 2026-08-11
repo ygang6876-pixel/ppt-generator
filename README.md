@@ -52,8 +52,9 @@ http://127.0.0.1:5000
 
 - Markdown：`.md`、`.markdown`、`.txt`
 - WPS/Word 文档：`.docx`
+- 尝试自动转换：`.doc`、`.wps`
 
-说明：WPS 文字请优先另存为 `.docx` 格式后上传；老版 `.doc` 和 WPS 私有 `.wps` 格式暂不支持直接解析。
+说明：`.doc` 和 `.wps` 会先自动转换为 `.docx`，再生成 PPT。自动转换需要本机安装 LibreOffice，或安装 Microsoft Word 并具备 Windows 自动化能力；如果转换失败，请先在 WPS/Word 中另存为 `.docx` 后再上传。
 
 ## Markdown 写法
 
@@ -103,5 +104,4 @@ ppt-generator/
 ## 后续计划
 
 - 支持更多主题模板
-- 支持 `.doc` / `.wps` 文件自动转换
 - 增加图片文件一并上传

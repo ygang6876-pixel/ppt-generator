@@ -1,15 +1,30 @@
 from io import BytesIO
 from pathlib import Path
+import re
 import tempfile
 
 from flask import Flask, render_template_string, request, send_file
 
+from src.document_converter import DocumentConversionError, convert_to_docx
 from src.docx_parser import parse_docx
 from src.markdown_parser import parse_markdown
 from src.ppt_builder import build_presentation
 
 
 app = Flask(__name__)
+
+
+TEXT = {
+    "subtitle": "\u7c98\u8d34 Markdown\uff0c\u6216\u4e0a\u4f20 Markdown / WPS Word \u6587\u6863\uff0c\u751f\u6210\u53ef\u7f16\u8f91\u7684 PowerPoint\u3002",
+    "markdown_label": "Markdown \u5185\u5bb9",
+    "markdown_hint": "\u652f\u6301\u6807\u9898\u3001\u5217\u8868\u3001\u56fe\u7247\u8bed\u6cd5\u548c Markdown \u8868\u683c\uff1b\u4e0a\u4f20\u6587\u4ef6\u65f6\u4f1a\u4f18\u5148\u4f7f\u7528\u4e0a\u4f20\u6587\u4ef6\u3002",
+    "upload_label": "\u4e0a\u4f20\u6587\u4ef6",
+    "upload_hint": "\u652f\u6301 .md\u3001.txt\u3001.docx\uff0c\u5e76\u4f1a\u5c1d\u8bd5\u81ea\u52a8\u8f6c\u6362 .doc\u3001.wps\u3002",
+    "footer_label": "\u9875\u811a\u6587\u5b57",
+    "output_label": "\u5bfc\u51fa\u6587\u4ef6\u540d",
+    "output_hint": "\u4e0d\u7528\u8f93\u5165 .pptx \u540e\u7f00\uff0c\u7cfb\u7edf\u4f1a\u81ea\u52a8\u8865\u4e0a\u3002",
+    "button": "\u751f\u6210 PPT",
+}
 
 
 PAGE = """
@@ -29,6 +44,9 @@ PAGE = """
       --line: #d9dee7;
       --brand: #1f6feb;
       --brand-dark: #164fa8;
+      --danger-bg: #fff1f2;
+      --danger-line: #fecdd3;
+      --danger-text: #9f1239;
     }
     * { box-sizing: border-box; }
     body {
@@ -64,6 +82,15 @@ PAGE = """
       border-radius: 8px;
       padding: 22px;
       box-shadow: 0 12px 30px rgba(23, 32, 51, 0.06);
+    }
+    .error {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--danger-line);
+      border-radius: 6px;
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      font-size: 14px;
     }
     form {
       display: grid;
@@ -135,29 +162,39 @@ PAGE = """
     <div class="top">
       <div>
         <h1>PPT Generator</h1>
-        <p class="sub">粘贴 Markdown，或上传 Markdown / WPS Word 文档，生成可编辑的 PowerPoint。</p>
+        <p class="sub">{{ text.subtitle }}</p>
       </div>
     </div>
     <section class="panel">
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
       <form method="post" action="/generate" enctype="multipart/form-data">
         <div>
-          <label for="content_text">Markdown 内容</label>
+          <label for="content_text">{{ text.markdown_label }}</label>
           <textarea id="content_text" name="content_text">{{ sample }}</textarea>
-          <div class="hint">支持标题、列表、图片语法和 Markdown 表格；上传文件时会优先使用上传文件。</div>
+          <div class="hint">{{ text.markdown_hint }}</div>
         </div>
         <div class="grid">
           <div>
-            <label for="content_file">上传文件</label>
-            <input id="content_file" name="content_file" type="file" accept=".md,.markdown,.txt,.docx">
-            <div class="hint">支持 `.md`、`.txt`、WPS/Word `.docx` 文件。</div>
+            <label for="content_file">{{ text.upload_label }}</label>
+            <input id="content_file" name="content_file" type="file" accept=".md,.markdown,.txt,.docx,.doc,.wps">
+            <div class="hint">{{ text.upload_hint }}</div>
           </div>
           <div>
-            <label for="footer">页脚文字</label>
-            <input id="footer" name="footer" type="text" value="我的PPT生成项目">
+            <label for="footer">{{ text.footer_label }}</label>
+            <input id="footer" name="footer" type="text" value="{{ footer }}">
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label for="output_name">{{ text.output_label }}</label>
+            <input id="output_name" name="output_name" type="text" value="{{ output_name }}">
+            <div class="hint">{{ text.output_hint }}</div>
           </div>
         </div>
         <div class="actions">
-          <button type="submit">生成 PPT</button>
+          <button type="submit">{{ text.button }}</button>
         </div>
       </form>
     </section>
@@ -167,48 +204,70 @@ PAGE = """
 """
 
 
-SAMPLE_MARKDOWN = """# PPT 生成项目演示
+SAMPLE_MARKDOWN = """# PPT \u751f\u6210\u9879\u76ee\u6f14\u793a
 
-根据 Markdown 或 WPS 文档自动生成 PowerPoint。
+\u6839\u636e Markdown \u6216 WPS \u6587\u6863\u81ea\u52a8\u751f\u6210 PowerPoint\u3002
 
-## 项目目标
+## \u9879\u76ee\u76ee\u6807
 
-- 输入 Markdown、文本提纲或 .docx 文档
-- 自动拆分为 PPT 页面
-- 生成可编辑的 `.pptx` 文件
+- \u8f93\u5165 Markdown\u3001\u6587\u672c\u63d0\u7eb2\u6216 .docx \u6587\u6863
+- \u81ea\u52a8\u62c6\u5206\u4e3a PPT \u9875\u9762
+- \u751f\u6210\u53ef\u7f16\u8f91\u7684 `.pptx` \u6587\u4ef6
 
-## 功能进度表
+## \u529f\u80fd\u8fdb\u5ea6\u8868
 
-| 模块 | 状态 | 说明 |
+| \u6a21\u5757 | \u72b6\u6001 | \u8bf4\u660e |
 | --- | --- | --- |
-| 标题页 | 已完成 | 自动生成封面 |
-| 内容页 | 已完成 | 支持段落和列表 |
-| 表格页 | 已完成 | 支持 Markdown 和 Word 表格 |
+| \u6807\u9898\u9875 | \u5df2\u5b8c\u6210 | \u81ea\u52a8\u751f\u6210\u5c01\u9762 |
+| \u5185\u5bb9\u9875 | \u5df2\u5b8c\u6210 | \u652f\u6301\u6bb5\u843d\u548c\u5217\u8868 |
+| \u8868\u683c\u9875 | \u5df2\u5b8c\u6210 | \u652f\u6301 Markdown \u548c Word \u8868\u683c |
 """
 
 
 @app.get("/")
 def index():
-    return render_template_string(PAGE, sample=SAMPLE_MARKDOWN)
+    return _render_page()
 
 
 @app.post("/generate")
 def generate():
     uploaded_file = request.files.get("content_file") or request.files.get("markdown_file")
     footer_text = request.form.get("footer") or "Generated by PPT Generator"
+    output_name = _safe_output_name(request.form.get("output_name", "generated"))
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-        deck, base_dir = _load_deck(uploaded_file, temp_path)
-        output_path = temp_path / "generated.pptx"
-        build_presentation(deck, output_path, image_base_dir=base_dir, footer_text=footer_text)
-        pptx_data = BytesIO(output_path.read_bytes())
-        return send_file(
-            pptx_data,
-            as_attachment=True,
-            download_name="generated.pptx",
-            mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        )
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            deck, base_dir = _load_deck(uploaded_file, temp_path)
+            output_path = temp_path / output_name
+            build_presentation(deck, output_path, image_base_dir=base_dir, footer_text=footer_text)
+            pptx_data = BytesIO(output_path.read_bytes())
+            return send_file(
+                pptx_data,
+                as_attachment=True,
+                download_name=output_name,
+                mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            )
+    except ValueError as exc:
+        return _render_page(error=str(exc), status_code=400)
+    except DocumentConversionError as exc:
+        return _render_page(error=str(exc), status_code=400)
+    except FileNotFoundError as exc:
+        return _render_page(error=f"\u56fe\u7247\u6587\u4ef6\u672a\u627e\u5230\uff1a{exc}", status_code=400)
+
+
+def _render_page(error: str | None = None, status_code: int = 200):
+    return (
+        render_template_string(
+            PAGE,
+            sample=SAMPLE_MARKDOWN,
+            footer="\u6211\u7684PPT\u751f\u6210\u9879\u76ee",
+            output_name="generated",
+            error=error,
+            text=TEXT,
+        ),
+        status_code,
+    )
 
 
 def _load_deck(uploaded_file, temp_path: Path):
@@ -219,12 +278,31 @@ def _load_deck(uploaded_file, temp_path: Path):
         uploaded_file.save(saved_path)
         if suffix == ".docx":
             return parse_docx(saved_path), saved_path.parent
+        if suffix in {".doc", ".wps"}:
+            converted_path = convert_to_docx(saved_path, temp_path)
+            return parse_docx(converted_path), converted_path.parent
         if suffix in {".md", ".markdown", ".txt"}:
-            return parse_markdown(saved_path.read_text(encoding="utf-8-sig")), saved_path.parent
-        raise ValueError("仅支持 .md、.markdown、.txt、.docx 文件。")
+            markdown_text = saved_path.read_text(encoding="utf-8-sig")
+            _validate_text(markdown_text)
+            return parse_markdown(markdown_text), saved_path.parent
+        raise ValueError("\u4ec5\u652f\u6301 .md\u3001.markdown\u3001.txt\u3001.docx\u3001.doc\u3001.wps \u6587\u4ef6\u3002")
 
     markdown_text = request.form.get("content_text") or request.form.get("markdown_text", "")
+    _validate_text(markdown_text)
     return parse_markdown(markdown_text), Path.cwd()
+
+
+def _validate_text(text: str) -> None:
+    if not text.strip():
+        raise ValueError("\u8bf7\u5148\u7c98\u8d34 Markdown \u5185\u5bb9\uff0c\u6216\u4e0a\u4f20\u4e00\u4e2a\u652f\u6301\u7684\u6587\u4ef6\u3002")
+
+
+def _safe_output_name(name: str) -> str:
+    stem = Path(name or "generated").stem
+    stem = re.sub(r"[^0-9A-Za-z\u4e00-\u9fff_-]+", "_", stem).strip("_")
+    if not stem:
+        stem = "generated"
+    return f"{stem}.pptx"
 
 
 if __name__ == "__main__":
