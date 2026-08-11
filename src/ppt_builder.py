@@ -74,7 +74,7 @@ def _add_title_slide(prs: Presentation, title: str, subtitle: str, theme: Theme)
     subtitle_frame = subtitle_box.text_frame
     subtitle_frame.clear()
     p = subtitle_frame.paragraphs[0]
-    p.text = subtitle
+    p.text = subtitle or " "
     p.alignment = PP_ALIGN.CENTER
     run = p.runs[0]
     run.font.size = Pt(20)
@@ -343,32 +343,44 @@ def _add_compare_layout(slide, items: list[str], theme: Theme) -> None:
 
 
 def _add_timeline_layout(slide, items: list[str], theme: Theme) -> None:
-    visible = _pad_items(items, 4)[:4]
-    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.2), Inches(3.58), Inches(10.9), Inches(0.05))
+    visible = [item for item in items if item][:4]
+    if not visible:
+        return
+    count = len(visible)
+    start_x = 2.0 if count <= 3 else 1.25
+    step_x = 9.0 / max(1, count - 1) if count > 1 else 0
+    line_left = Inches(start_x)
+    line_width = Inches(step_x * (count - 1)) if count > 1 else Inches(0.1)
+    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, line_left, Inches(3.58), line_width, Inches(0.05))
     line.fill.solid()
     line.fill.fore_color.rgb = theme.accent_color
     line.line.color.rgb = theme.accent_color
     for index, item in enumerate(visible):
-        x = Inches(1.25 + index * 2.85)
+        x = Inches(start_x + index * step_x)
         marker = slide.shapes.add_shape(MSO_SHAPE.OVAL, x, Inches(3.25), Inches(0.65), Inches(0.65))
         marker.fill.solid()
         marker.fill.fore_color.rgb = theme.accent_color
         marker.line.color.rgb = theme.accent_color
         _add_box_text(slide, str(index + 1), x, Inches(3.38), Inches(0.65), Inches(0.3), theme, Pt(13), bold=True, color=RGBColor(255, 255, 255), align=PP_ALIGN.CENTER)
-        _add_box_text(slide, _short_text(item, 28), x - Inches(0.55), Inches(4.25), Inches(1.75), Inches(1.3), theme, Pt(13), bold=True, align=PP_ALIGN.CENTER)
+        _add_box_text(slide, _short_text(item, 24), x - Inches(0.55), Inches(4.25), Inches(1.75), Inches(1.3), theme, Pt(13), bold=True, align=PP_ALIGN.CENTER)
 
 
 def _add_process_layout(slide, items: list[str], theme: Theme) -> None:
-    for index, item in enumerate(_pad_items(items, 4)[:4]):
-        left = Inches(1.0 + index * 2.9)
-        arrow = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, left, Inches(2.15), Inches(2.15), Inches(1.02))
+    visible = [item for item in items if item][:4]
+    if not visible:
+        return
+    count = len(visible)
+    arrow_width = 2.65 if count <= 3 else 2.15
+    start_x = (13.333 - (count * arrow_width + max(0, count - 1) * 0.55)) / 2
+    for index, item in enumerate(visible):
+        left = Inches(start_x + index * (arrow_width + 0.55))
+        arrow = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, left, Inches(2.35), Inches(arrow_width), Inches(1.12))
         arrow.fill.solid()
         arrow.fill.fore_color.rgb = theme.accent_color if index == 0 else theme.subtle_fill
         arrow.line.color.rgb = theme.accent_color
         color = RGBColor(255, 255, 255) if index == 0 else theme.title_color
-        _add_box_text(slide, f"{index + 1}", left + Inches(0.15), Inches(2.5), Inches(0.35), Inches(0.22), theme, Pt(11), bold=True, color=color, align=PP_ALIGN.CENTER)
-        _add_box_text(slide, _short_text(item, 34), left + Inches(0.48), Inches(2.38), Inches(1.18), Inches(0.42), theme, Pt(13), bold=True, color=color, align=PP_ALIGN.CENTER)
-        _add_box_text(slide, _short_text(item, 28), left - Inches(0.05), Inches(3.65), Inches(1.9), Inches(0.95), theme, Pt(11), align=PP_ALIGN.CENTER)
+        _add_box_text(slide, f"{index + 1}", left + Inches(0.18), Inches(2.74), Inches(0.35), Inches(0.22), theme, Pt(11), bold=True, color=color, align=PP_ALIGN.CENTER)
+        _add_box_text(slide, _short_text(item, 30), left + Inches(0.55), Inches(2.58), Inches(arrow_width - 0.9), Inches(0.52), theme, Pt(12), bold=True, color=color, align=PP_ALIGN.CENTER)
 
 
 def _add_metrics_layout(slide, items: list[str], theme: Theme) -> None:
@@ -400,16 +412,14 @@ def _add_summary_layout(slide, items: list[str], theme: Theme) -> None:
 
 
 def _add_highlight_layout(slide, items: list[str], theme: Theme) -> None:
-    hero = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.85), Inches(1.6), Inches(3.1), Inches(4.85))
-    hero.fill.solid()
-    hero.fill.fore_color.rgb = theme.table_header
-    hero.line.color.rgb = theme.table_header
-    _add_box_text(slide, "KEY", Inches(1.15), Inches(2.0), Inches(2.4), Inches(0.5), theme, Pt(26), bold=True, color=RGBColor(255, 255, 255), align=PP_ALIGN.CENTER)
-    _add_box_text(slide, "POINTS", Inches(1.15), Inches(2.75), Inches(2.4), Inches(0.5), theme, Pt(26), bold=True, color=theme.accent_color, align=PP_ALIGN.CENTER)
+    accent = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.95), Inches(1.55), Inches(0.12), Inches(4.85))
+    accent.fill.solid()
+    accent.fill.fore_color.rgb = theme.accent_color
+    accent.line.color.rgb = theme.accent_color
     for index, item in enumerate(items[:5]):
-        top = Inches(1.65 + index * 0.92)
-        _add_box_text(slide, f"{index + 1:02d}", Inches(4.55), top, Inches(0.55), Inches(0.34), theme, Pt(13), bold=True, color=theme.accent_color)
-        _add_box_text(slide, _short_text(item, 58), Inches(5.25), top - Inches(0.03), Inches(6.6), Inches(0.58), theme, Pt(15), bold=index == 0)
+        top = Inches(1.62 + index * 0.82)
+        _add_box_text(slide, f"{index + 1:02d}", Inches(1.35), top, Inches(0.55), Inches(0.32), theme, Pt(12), bold=True, color=theme.accent_color)
+        _add_box_text(slide, _short_text(item, 54), Inches(2.05), top - Inches(0.03), Inches(9.55), Inches(0.5), theme, Pt(16), bold=index == 0)
 
 
 def _add_risk_layout(slide, items: list[str], theme: Theme) -> None:
@@ -420,7 +430,7 @@ def _add_risk_layout(slide, items: list[str], theme: Theme) -> None:
         (Inches(6.85), Inches(4.0)),
     ]
     labels = ["风险点", "控制措施", "责任要求", "检查验收"]
-    for index, item in enumerate(_pad_items(items, 4)[:4]):
+    for index, item in enumerate([item for item in items if item][:4]):
         left, top = positions[index]
         panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, Inches(5.45), Inches(1.75))
         panel.fill.solid()
@@ -431,7 +441,7 @@ def _add_risk_layout(slide, items: list[str], theme: Theme) -> None:
         tag.fill.fore_color.rgb = theme.accent_color
         tag.line.color.rgb = theme.accent_color
         _add_box_text(slide, labels[index], left + Inches(0.1), top + Inches(0.06), Inches(1.05), Inches(0.18), theme, Pt(9), bold=True, color=RGBColor(255, 255, 255), align=PP_ALIGN.CENTER)
-        _add_box_text(slide, _short_text(item, 45), left + Inches(0.25), top + Inches(0.5), Inches(4.85), Inches(0.92), theme, Pt(13), bold=True)
+        _add_box_text(slide, _short_text(_strip_item_label(item), 45), left + Inches(0.25), top + Inches(0.5), Inches(4.85), Inches(0.92), theme, Pt(13), bold=True)
 
 
 def _add_checklist_layout(slide, items: list[str], theme: Theme) -> None:
@@ -495,7 +505,7 @@ def _add_box_text(
 def _pad_items(items: list[str], count: int) -> list[str]:
     padded = items[:]
     while len(padded) < count:
-        padded.append("待补充")
+        padded.append("")
     return padded
 
 
@@ -515,11 +525,18 @@ def _split_metric(item: str) -> tuple[str, str]:
     return item, "指标说明"
 
 
+def _strip_item_label(item: str) -> str:
+    return re.sub(r"^(风险点|控制措施|责任要求|检查验收|执行要求|过程控制|责任落实|验收闭环)：", "", item).strip()
+
+
 def _short_text(text: str, limit: int) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     if len(text) <= limit:
         return text
-    return f"{text[:limit].rstrip()}..."
+    trimmed = re.split(r"，|、|；|。|,|;", text[: limit + 1].rstrip())[0]
+    if 8 <= len(trimmed) <= limit:
+        return trimmed
+    return text[:limit].rstrip()
 
 
 def _add_table(slide, table_data: Table, left: int, top: int, width: int, height: int, theme: Theme) -> None:

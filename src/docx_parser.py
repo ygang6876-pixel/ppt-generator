@@ -300,7 +300,10 @@ def _shorten(text: str, limit: int = 120) -> str:
     text = _clean_text(text)
     if len(text) <= limit:
         return text
-    return f"{text[:limit].rstrip()}..."
+    trimmed = re.split(r"，|、|；|。|,|;", text[: limit + 1].rstrip())[0]
+    if 8 <= len(trimmed) <= limit:
+        return trimmed
+    return text[:limit].rstrip()
 
 
 def _extract_paragraph_images(paragraph: Paragraph, media_dir: Path, start_index: int) -> list[ImageAsset]:

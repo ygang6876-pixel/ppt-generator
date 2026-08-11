@@ -56,8 +56,6 @@ def _distill_process(items: list[str]) -> list[str]:
 
 def _distill_labeled(items: list[str], labels: list[str], limit: int) -> list[str]:
     values = [_shorten(_key_sentence(item), limit) for item in items[: len(labels)]]
-    while len(values) < len(labels):
-        values.append("按专项方案执行")
     return [f"{label}：{value}" for label, value in zip(labels, values)]
 
 
@@ -108,4 +106,7 @@ def _shorten(text: str, limit: int) -> str:
     text = _clean(text)
     if len(text) <= limit:
         return text
-    return f"{text[:limit].rstrip()}..."
+    trimmed = re.split(r"，|、|；|。|,|;", text[: limit + 1].rstrip())[0]
+    if 8 <= len(trimmed) <= limit:
+        return trimmed
+    return text[:limit].rstrip()

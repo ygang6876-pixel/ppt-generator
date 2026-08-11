@@ -52,3 +52,52 @@ def test_semantic_layouts_keep_text_density_under_control(tmp_path: Path):
             if getattr(shape, "has_text_frame", False):
                 text_length += sum(len(paragraph.text) for paragraph in shape.text_frame.paragraphs)
         assert text_length < 360
+
+
+def test_process_layout_avoids_placeholders_and_duplicate_step_text(tmp_path: Path):
+    deck = Deck(
+        title="流程页测试",
+        subtitle="",
+        slides=[Slide(title="施工流程", bullets=["测量放样", "分层开挖"], layout="process")],
+    )
+    output_path = tmp_path / "process.pptx"
+
+    build_presentation(deck, output_path, theme=get_theme("construction"))
+
+    prs = Presentation(output_path)
+    slide = prs.slides[1]
+    text = "\n".join(
+        paragraph.text
+        for shape in slide.shapes
+        if getattr(shape, "has_text_frame", False)
+        for paragraph in shape.text_frame.paragraphs
+    )
+    assert "待补充" not in text
+    assert text.count("测量放样") == 1
+
+
+def test_builder_does_not_emit_ellipsis_for_shortened_text(tmp_path: Path):
+    deck = Deck(
+        title="省略号测试",
+        subtitle="",
+        slides=[
+            Slide(
+                title="工程概况",
+                body=["湖北秭归抽水蓄能电站位于湖北省宜昌市秭归县茅坪镇，上水库沿村村通公路、芝茅公路至秭归县。"],
+                layout="summary",
+            )
+        ],
+    )
+    output_path = tmp_path / "ellipsis.pptx"
+
+    build_presentation(deck, output_path, theme=get_theme("construction"))
+
+    prs = Presentation(output_path)
+    text = "\n".join(
+        paragraph.text
+        for shape in prs.slides[1].shapes
+        if getattr(shape, "has_text_frame", False)
+        for paragraph in shape.text_frame.paragraphs
+    )
+    assert "..." not in text
+    assert "…" not in text

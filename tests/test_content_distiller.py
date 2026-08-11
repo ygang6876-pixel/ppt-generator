@@ -25,6 +25,7 @@ def test_distills_risk_slide_into_labeled_items():
     assert bullets[0].startswith("风险点：")
     assert bullets[1].startswith("控制措施：")
     assert all(len(item) <= 48 for item in bullets)
+    assert "按专项方案执行" not in "\n".join(bullets)
 
 
 def test_summarizes_complex_table_for_report():
@@ -39,3 +40,16 @@ def test_summarizes_complex_table_for_report():
     assert body == ["源表格共 2 行、6 列；汇报版提取字段和代表项，避免压缩失真。"]
     assert bullets[0] == "字段：序号、工程部位、强度等级、塌落度、计划方量"
     assert bullets[1] == "1 / 洞口边坡 / C30"
+
+
+def test_distillation_does_not_emit_ellipsis():
+    _, bullets = distill_slide_items(
+        "工程概况",
+        ["湖北秭归抽水蓄能电站位于湖北省宜昌市秭归县茅坪镇，上水库沿村村通公路、芝茅公路至秭归县。"],
+        [],
+        "summary",
+    )
+
+    assert bullets
+    assert "..." not in bullets[0]
+    assert "…" not in bullets[0]

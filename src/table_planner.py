@@ -44,8 +44,8 @@ def plan_table_for_report(title: str, table: Table) -> TablePlan:
         key_table = _compact_key_table(headers, rows)
         return TablePlan(
             layout="full-table" if len(key_table.rows) <= 6 else "checklist",
-            body=[f"源表格共 {row_count} 行、{col_count} 列；页面保留关键列，完整数据以原文为准。"],
-            bullets=_representative_rows(headers, rows, limit=3),
+            body=[],
+            bullets=[] if len(key_table.rows) <= 6 else _representative_rows(headers, rows, limit=3),
             tables=[key_table] if len(key_table.rows) <= 6 else [],
         )
 
@@ -182,4 +182,7 @@ def _shorten(text: str, limit: int) -> str:
     text = _clean(text)
     if len(text) <= limit:
         return text
-    return f"{text[:limit].rstrip()}..."
+    trimmed = re.split(r"，|、|；|。|,|;", text[: limit + 1].rstrip())[0]
+    if 8 <= len(trimmed) <= limit:
+        return trimmed
+    return text[:limit].rstrip()
