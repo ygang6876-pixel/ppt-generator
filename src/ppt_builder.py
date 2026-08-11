@@ -6,7 +6,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
-from .markdown_parser import Deck, ImageAsset
+from .markdown_parser import Deck, ImageAsset, Table
 from .theme import DEFAULT_THEME, Theme
 
 
@@ -33,6 +33,7 @@ def build_presentation(
             slide.body,
             slide.bullets,
             slide.images,
+            slide.tables,
             image_base_dir or output_path.parent,
             theme,
             footer_text,
@@ -75,13 +76,34 @@ def _add_content_slide(
     body: list[str],
     bullets: list[str],
     images: list[ImageAsset],
+    tables: list[Table],
     image_base_dir: Path,
     theme: Theme,
     footer_text: str,
 ) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     _add_background(slide, theme.slide_background)
+    _add_slide_title(slide, title, theme)
 
+    has_images = bool(images)
+    has_tables = bool(tables)
+    text_width = Inches(5.8) if has_images else Inches(11.4)
+    text_height = Inches(1.25) if has_tables else Inches(5.3)
+
+    _add_text_content(slide, body, bullets, text_width, text_height, theme)
+
+    if tables:
+        table_top = Inches(2.75) if body or bullets else Inches(1.7)
+        table_width = Inches(11.4) if not has_images else Inches(5.8)
+        _add_table(slide, tables[0], Inches(0.95), table_top, table_width, Inches(3.7), theme)
+
+    if images:
+        _add_images(slide, images, image_base_dir)
+
+    _add_footer(slide, footer_text, theme)
+
+
+def _add_slide_title(slide, title: str, theme: Theme) -> None:
     accent = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(1.25), Inches(1.1), Inches(0.06))
     accent.fill.solid()
     accent.fill.fore_color.rgb = theme.accent_color
@@ -98,9 +120,9 @@ def _add_content_slide(
     run.font.name = theme.title_font
     run.font.color.rgb = theme.title_color
 
-    has_images = bool(images)
-    content_width = Inches(5.8) if has_images else Inches(11.4)
-    content_box = slide.shapes.add_textbox(Inches(0.95), Inches(1.55), content_width, Inches(5.3))
+
+def _add_text_content(slide, body: list[str], bullets: list[str], width: int, height: int, theme: Theme) -> None:
+    content_box = slide.shapes.add_textbox(Inches(0.95), Inches(1.55), width, height)
     frame = content_box.text_frame
     frame.word_wrap = True
     frame.clear()
@@ -119,9 +141,42 @@ def _add_content_slide(
         run.font.name = theme.body_font
         run.font.color.rgb = theme.body_color
 
-    if images:
-        _add_images(slide, images, image_base_dir)
 
+def _add_table(slide, table_data: Table, left: int, top: int, width: int, height: int, theme: Theme) -> None:
+    row_count = len(table_data.rows) + 1
+    col_count = len(table_data.headers)
+    table_shape = slide.shapes.add_table(row_count, col_count, left, top, width, height)
+    table = table_shape.table
+
+    for col_idx, header in enumerate(table_data.headers):
+        _set_cell(table.cell(0, col_idx), header, theme, is_header=True)
+
+    for row_idx, row in enumerate(table_data.rows, start=1):
+        for col_idx, value in enumerate(row):
+            _set_cell(table.cell(row_idx, col_idx), value, theme, is_header=False)
+
+
+def _set_cell(cell, text: str, theme: Theme, is_header: bool) -> None:
+    cell.text = text
+    cell.margin_left = Inches(0.06)
+    cell.margin_right = Inches(0.06)
+    cell.margin_top = Inches(0.04)
+    cell.margin_bottom = Inches(0.04)
+
+    fill = cell.fill
+    fill.solid()
+    fill.fore_color.rgb = theme.title_color if is_header else RGBColor(255, 255, 255)
+
+    for paragraph in cell.text_frame.paragraphs:
+        paragraph.alignment = PP_ALIGN.CENTER
+        for run in paragraph.runs:
+            run.font.name = theme.body_font
+            run.font.size = Pt(12 if is_header else 11)
+            run.font.bold = is_header
+            run.font.color.rgb = RGBColor(255, 255, 255) if is_header else theme.body_color
+
+
+def _add_footer(slide, footer_text: str, theme: Theme) -> None:
     footer = slide.shapes.add_textbox(Inches(0.7), Inches(7.0), Inches(12), Inches(0.3))
     footer_frame = footer.text_frame
     footer_frame.clear()
