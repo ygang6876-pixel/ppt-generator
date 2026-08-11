@@ -251,6 +251,19 @@ docker build -t ppt-generator .
 docker run --rm -p 5000:5000 ppt-generator
 ```
 
+Docker Compose：
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+生产环境部署说明见：
+
+```text
+docs/DEPLOYMENT.md
+```
+
 ## 图片生成 PPT
 
 网页中可以直接多选上传图片：

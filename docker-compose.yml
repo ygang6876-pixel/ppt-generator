@@ -1,0 +1,21 @@
+services:
+  ppt-generator:
+    build: .
+    image: ppt-generator:latest
+    ports:
+      - "${PPT_GENERATOR_PORT:-5000}:5000"
+    env_file:
+      - .env
+    environment:
+      PPT_GENERATOR_HOST: 0.0.0.0
+      PPT_GENERATOR_PORT: 5000
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-180}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

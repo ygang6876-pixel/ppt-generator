@@ -19,4 +19,7 @@ ENV PPT_GENERATOR_PORT=5000
 
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/healthz', timeout=3)"
+
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]

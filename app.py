@@ -321,6 +321,11 @@ def index():
     return _render_page()
 
 
+@app.get("/healthz")
+def healthz():
+    return jsonify({"status": "ok"})
+
+
 @app.post("/generate")
 def generate():
     uploaded_file = request.files.get("content_file") or request.files.get("markdown_file")
