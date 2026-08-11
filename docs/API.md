@@ -60,7 +60,7 @@ POST /api/generate
 | `content_file` | file | 可选，支持 `.md`、`.txt`、`.docx`、`.doc`、`.wps` |
 | `image_files` | file[] | 可选，可上传多张图片 |
 | `content_text` | text | 可选，未上传文件时使用 |
-| `theme` | text | 可选，`auto`、`business`、`clean`、`dark`、`midnight`、`emerald`、`sunrise`、`ivory`、`tech` |
+| `theme` | text | 可选，`auto`、`business`、`clean`、`dark`、`midnight`、`emerald`、`sunrise`、`ivory`、`tech`、`construction` |
 | `footer` | text | 可选，页脚文字 |
 | `output_name` | text | 可选，导出文件名 |
 

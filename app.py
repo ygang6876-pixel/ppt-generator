@@ -281,6 +281,7 @@ PAGE = """
               <option value="sunrise">Sunrise</option>
               <option value="ivory">Ivory</option>
               <option value="tech">Tech</option>
+              <option value="construction">Construction</option>
             </select>
           </div>
         </div>

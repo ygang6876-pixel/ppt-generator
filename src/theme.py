@@ -132,6 +132,20 @@ THEMES = {
         table_header=RGBColor(21, 32, 64),
         subtle_fill=RGBColor(230, 236, 255),
     ),
+    "construction": Theme(
+        title_font="Microsoft YaHei",
+        body_font="Microsoft YaHei",
+        cover_background=RGBColor(36, 39, 43),
+        slide_background=RGBColor(248, 249, 247),
+        title_color=RGBColor(40, 44, 50),
+        cover_title_color=RGBColor(255, 255, 255),
+        cover_subtitle_color=RGBColor(239, 230, 214),
+        body_color=RGBColor(47, 52, 58),
+        accent_color=RGBColor(214, 116, 31),
+        footer_color=RGBColor(111, 116, 124),
+        table_header=RGBColor(49, 55, 63),
+        subtle_fill=RGBColor(239, 232, 219),
+    ),
 }
 
 DEFAULT_THEME = THEMES["business"]

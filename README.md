@@ -133,6 +133,7 @@ footer: PPT Generator
 - `sunrise`：暖色汇报风格
 - `ivory`：纸感简洁风格
 - `tech`：科技蓝紫风格
+- `construction`：工程施工汇报风格
 
 ## 布局
 
