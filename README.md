@@ -10,9 +10,10 @@
 - 将普通段落和列表转换为 PPT 内容
 - 支持 Markdown 图片插入
 - 支持 Markdown 表格转 PPT 表格
+- 支持上传 WPS/Word `.docx` 文档生成 PPT
 - 使用中文字体和统一主题样式
 - 支持自定义页脚文字
-- 支持网页粘贴或上传 Markdown 后生成 PPT
+- 支持网页粘贴或上传文件后生成 PPT
 - 导出 `.pptx` 文件
 
 ## 快速开始
@@ -46,6 +47,13 @@ python app.py
 ```text
 http://127.0.0.1:5000
 ```
+
+网页上传支持：
+
+- Markdown：`.md`、`.markdown`、`.txt`
+- WPS/Word 文档：`.docx`
+
+说明：WPS 文字请优先另存为 `.docx` 格式后上传；老版 `.doc` 和 WPS 私有 `.wps` 格式暂不支持直接解析。
 
 ## Markdown 写法
 
@@ -95,5 +103,5 @@ ppt-generator/
 ## 后续计划
 
 - 支持更多主题模板
-- 支持 Word 文档转 PPT
+- 支持 `.doc` / `.wps` 文件自动转换
 - 增加图片文件一并上传
