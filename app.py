@@ -28,6 +28,9 @@ TEXT = {
     "output_hint": "\u4e0d\u7528\u8f93\u5165 .pptx \u540e\u7f00\uff0c\u7cfb\u7edf\u4f1a\u81ea\u52a8\u8865\u4e0a\u3002",
     "theme_label": "\u4e3b\u9898\u98ce\u683c",
     "button": "\u751f\u6210 PPT",
+    "preview_button": "\u9884\u89c8\u7ed3\u6784",
+    "preview_title": "\u751f\u6210\u9884\u89c8",
+    "preview_hint": "\u8fd9\u91cc\u663e\u793a\u5373\u5c06\u751f\u6210\u7684 PPT \u7ed3\u6784\uff0c\u4fbf\u4e8e\u751f\u6210\u524d\u68c0\u67e5\u3002",
 }
 
 
@@ -96,6 +99,52 @@ PAGE = """
       color: var(--danger-text);
       font-size: 14px;
     }
+    .preview {
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      padding: 16px;
+    }
+    .preview h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+    .preview-summary {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+    .preview-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .preview-item {
+      display: grid;
+      grid-template-columns: 52px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+    }
+    .preview-index {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .preview-name {
+      font-weight: 700;
+    }
+    .preview-meta {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
     form {
       display: grid;
       gap: 18px;
@@ -133,6 +182,7 @@ PAGE = """
     }
     .actions {
       display: flex;
+      gap: 10px;
       justify-content: flex-end;
     }
     button {
@@ -172,6 +222,23 @@ PAGE = """
     <section class="panel">
       {% if error %}
         <div class="error">{{ error }}</div>
+      {% endif %}
+      {% if preview %}
+        <div class="preview">
+          <h2>{{ text.preview_title }}</h2>
+          <div class="preview-summary">
+            {{ text.preview_hint }} 标题：{{ preview.title }}；共 {{ preview.total_pages }} 页。
+          </div>
+          <ul class="preview-list">
+            {% for item in preview.slides %}
+              <li class="preview-item">
+                <span class="preview-index">第 {{ item.index }} 页</span>
+                <span class="preview-name">{{ item.title }}</span>
+                <span class="preview-meta">{{ item.meta }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
       {% endif %}
       <form method="post" action="/generate" enctype="multipart/form-data">
         <div>
@@ -217,6 +284,7 @@ PAGE = """
           </div>
         </div>
         <div class="actions">
+          <button type="submit" formaction="/preview">{{ text.preview_button }}</button>
           <button type="submit">{{ text.button }}</button>
         </div>
       </form>
@@ -282,7 +350,22 @@ def generate():
         return _render_page(error=f"\u56fe\u7247\u6587\u4ef6\u672a\u627e\u5230\uff1a{exc}", status_code=400)
 
 
-def _render_page(error: str | None = None, status_code: int = 200):
+@app.post("/preview")
+def preview():
+    uploaded_file = request.files.get("content_file") or request.files.get("markdown_file")
+    image_files = [file for file in request.files.getlist("image_files") if file and file.filename]
+
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck, _base_dir = _load_deck(uploaded_file, image_files, Path(temp_dir))
+            return _render_page(preview=_preview_deck(deck))
+    except ValueError as exc:
+        return _render_page(error=str(exc), status_code=400)
+    except DocumentConversionError as exc:
+        return _render_page(error=str(exc), status_code=400)
+
+
+def _render_page(error: str | None = None, preview: dict | None = None, status_code: int = 200):
     return (
         render_template_string(
             PAGE,
@@ -290,6 +373,7 @@ def _render_page(error: str | None = None, status_code: int = 200):
             footer="\u6211\u7684PPT\u751f\u6210\u9879\u76ee",
             output_name="generated",
             error=error,
+            preview=preview,
             text=TEXT,
         ),
         status_code,
@@ -373,6 +457,29 @@ def _safe_asset_name(name: str) -> str:
     path = Path(name)
     stem = re.sub(r"[^0-9A-Za-z\u4e00-\u9fff_-]+", "_", path.stem).strip("_") or "image"
     return f"{stem}{path.suffix.lower()}"
+
+
+def _preview_deck(deck: Deck) -> dict:
+    slides = [
+        {"index": 1, "title": deck.title or "\u5c01\u9762", "meta": "\u5c01\u9762"}
+    ]
+    for index, slide in enumerate(deck.slides, start=2):
+        text_count = len(slide.body) + len(slide.bullets)
+        meta_parts = [f"\u5e03\u5c40 {slide.layout}"]
+        if text_count:
+            meta_parts.append(f"\u6587\u5b57 {text_count}")
+        if slide.images:
+            meta_parts.append(f"\u56fe\u7247 {len(slide.images)}")
+        if slide.tables:
+            meta_parts.append(f"\u8868\u683c {len(slide.tables)}")
+        slides.append(
+            {
+                "index": index,
+                "title": slide.title or "\u672a\u547d\u540d",
+                "meta": " / ".join(meta_parts),
+            }
+        )
+    return {"title": deck.title, "total_pages": len(slides), "slides": slides}
 
 
 if __name__ == "__main__":

@@ -84,7 +84,7 @@ def parse_markdown(markdown: str) -> Deck:
         table = _parse_table_at(lines, index)
         if table is not None:
             if current is None:
-                current = Slide(title="内容", layout=pending_layout)
+                current = Slide(title="\u5185\u5bb9", layout=pending_layout)
                 pending_layout = "auto"
                 slides.append(current)
             current.tables.append(table)
@@ -94,7 +94,7 @@ def parse_markdown(markdown: str) -> Deck:
         image_match = IMAGE_PATTERN.fullmatch(line)
         if image_match:
             if current is None:
-                current = Slide(title="内容", layout=pending_layout)
+                current = Slide(title="\u5185\u5bb9", layout=pending_layout)
                 pending_layout = "auto"
                 slides.append(current)
             current.images.append(
@@ -108,7 +108,7 @@ def parse_markdown(markdown: str) -> Deck:
 
         if line.startswith(("- ", "* ")):
             if current is None:
-                current = Slide(title="内容", layout=pending_layout)
+                current = Slide(title="\u5185\u5bb9", layout=pending_layout)
                 pending_layout = "auto"
                 slides.append(current)
             current.bullets.append(line[2:].strip())
@@ -122,7 +122,7 @@ def parse_markdown(markdown: str) -> Deck:
         index += 1
 
     if not slides:
-        slides.append(Slide(title="内容", body=[subtitle], layout=pending_layout))
+        slides.append(Slide(title="\u5185\u5bb9", body=[subtitle], layout=pending_layout))
 
     return Deck(title=title, subtitle=subtitle, slides=slides, metadata=metadata)
 
