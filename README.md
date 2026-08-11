@@ -1,5 +1,17 @@
 # PPT Generator
 
+[![CI](https://github.com/ygang6876-pixel/ppt-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/ygang6876-pixel/ppt-generator/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## Project Status
+
+PPT Generator is an early-stage open source project for document-to-slide
+automation. It provides a CLI, web UI, API endpoints, theme/layout templates,
+Mermaid rendering, code highlighting, and Docker deployment files.
+
+The repository includes contributor guidelines, a security policy, issue
+templates, a roadmap, and CI tests to support long-term maintenance.
+
 一个根据 Markdown、文本提纲、WPS/Word 文档自动生成可编辑 PowerPoint 的项目。
 
 ## 设计参考
