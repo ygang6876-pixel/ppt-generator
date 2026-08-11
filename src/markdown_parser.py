@@ -24,6 +24,12 @@ class MermaidDiagram:
 
 
 @dataclass
+class CodeBlock:
+    language: str
+    code: str
+
+
+@dataclass
 class Slide:
     title: str
     bullets: list[str] = field(default_factory=list)
@@ -31,6 +37,7 @@ class Slide:
     images: list[ImageAsset] = field(default_factory=list)
     tables: list[Table] = field(default_factory=list)
     mermaid: list[MermaidDiagram] = field(default_factory=list)
+    code_blocks: list[CodeBlock] = field(default_factory=list)
     layout: str = "auto"
 
 
@@ -97,6 +104,16 @@ def parse_markdown(markdown: str) -> Deck:
             index += len(mermaid.code.splitlines()) + 2
             continue
 
+        code_block = _parse_code_at(lines, index)
+        if code_block is not None:
+            if current is None:
+                current = Slide(title="\u5185\u5bb9", layout=pending_layout)
+                pending_layout = "auto"
+                slides.append(current)
+            current.code_blocks.append(code_block)
+            index += len(code_block.code.splitlines()) + 2
+            continue
+
         table = _parse_table_at(lines, index)
         if table is not None:
             if current is None:
@@ -152,6 +169,22 @@ def _parse_mermaid_at(lines: list[str], index: int) -> MermaidDiagram | None:
         if lines[row_index] == "```":
             code = "\n".join(code_lines).strip()
             return MermaidDiagram(code=code) if code else None
+        code_lines.append(lines[row_index])
+        row_index += 1
+    return None
+
+
+def _parse_code_at(lines: list[str], index: int) -> CodeBlock | None:
+    line = lines[index]
+    if not line.startswith("```") or line.lower() == "```mermaid":
+        return None
+    language = line[3:].strip() or "text"
+    code_lines: list[str] = []
+    row_index = index + 1
+    while row_index < len(lines):
+        if lines[row_index] == "```":
+            code = "\n".join(code_lines)
+            return CodeBlock(language=language, code=code)
         code_lines.append(lines[row_index])
         row_index += 1
     return None

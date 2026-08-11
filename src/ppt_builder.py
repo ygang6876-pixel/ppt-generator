@@ -5,8 +5,11 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
+from pygments import lex
+from pygments.lexers import get_lexer_by_name, TextLexer
+from pygments.token import Comment, Keyword, Name, Number, String
 
-from .markdown_parser import Deck, ImageAsset, MermaidDiagram, Table
+from .markdown_parser import CodeBlock, Deck, ImageAsset, MermaidDiagram, Table
 from .mermaid_renderer import MermaidRenderError, render_mermaid
 from .theme import DEFAULT_THEME, Theme, get_theme
 
@@ -38,6 +41,7 @@ def build_presentation(
             slide.images,
             slide.tables,
             slide.mermaid,
+            slide.code_blocks,
             slide.layout,
             image_base_dir or output_path.parent,
             output_path.parent,
@@ -85,6 +89,7 @@ def _add_content_slide(
     images: list[ImageAsset],
     tables: list[Table],
     mermaid: list[MermaidDiagram],
+    code_blocks: list[CodeBlock],
     layout: str,
     image_base_dir: Path,
     work_dir: Path,
@@ -95,7 +100,12 @@ def _add_content_slide(
     _add_background(slide, theme.slide_background)
     _add_slide_title(slide, title, theme)
 
-    content_layout = _resolve_layout(layout, images, tables, mermaid)
+    content_layout = _resolve_layout(layout, images, tables, mermaid, code_blocks)
+    if code_blocks:
+        _add_code_blocks(slide, code_blocks, theme)
+        _add_footer(slide, footer_text, theme)
+        return
+
     if mermaid:
         _add_mermaid_diagrams(slide, mermaid, work_dir, content_layout, theme)
         _add_footer(slide, footer_text, theme)
@@ -146,7 +156,13 @@ def _add_slide_title(slide, title: str, theme: Theme) -> None:
     run.font.color.rgb = theme.title_color
 
 
-def _resolve_layout(layout: str, images: list[ImageAsset], tables: list[Table], mermaid: list[MermaidDiagram] | None = None) -> str:
+def _resolve_layout(
+    layout: str,
+    images: list[ImageAsset],
+    tables: list[Table],
+    mermaid: list[MermaidDiagram] | None = None,
+    code_blocks: list[CodeBlock] | None = None,
+) -> str:
     allowed = {
         "auto",
         "text",
@@ -160,10 +176,13 @@ def _resolve_layout(layout: str, images: list[ImageAsset], tables: list[Table], 
         "metrics",
         "summary",
         "diagram",
+        "code",
     }
     layout = layout if layout in allowed else "auto"
     if layout != "auto":
         return layout
+    if code_blocks:
+        return "code"
     if mermaid:
         return "diagram"
     if tables and not images:
@@ -448,6 +467,80 @@ def _add_mermaid_diagrams(slide, diagrams: list[MermaidDiagram], work_dir: Path,
         _fit_picture(picture, slot["width"], slot["height"])
         picture.left = slot["left"] + int((slot["width"] - picture.width) / 2)
         picture.top = slot["top"] + int((slot["height"] - picture.height) / 2)
+
+
+def _add_code_blocks(slide, code_blocks: list[CodeBlock], theme: Theme) -> None:
+    block = code_blocks[0]
+    panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.75), Inches(1.55), Inches(11.85), Inches(5.18))
+    panel.fill.solid()
+    panel.fill.fore_color.rgb = RGBColor(15, 23, 42)
+    panel.line.color.rgb = theme.accent_color
+
+    label = slide.shapes.add_textbox(Inches(0.95), Inches(1.72), Inches(3.0), Inches(0.28))
+    label_frame = label.text_frame
+    label_frame.clear()
+    p = label_frame.paragraphs[0]
+    p.text = block.language.upper()
+    run = p.runs[0]
+    run.font.size = Pt(10)
+    run.font.bold = True
+    run.font.name = theme.body_font
+    run.font.color.rgb = theme.accent_color
+
+    code_box = slide.shapes.add_textbox(Inches(0.95), Inches(2.1), Inches(11.35), Inches(4.35))
+    frame = code_box.text_frame
+    frame.word_wrap = True
+    frame.clear()
+
+    highlighted_lines = _highlight_code(block.code, block.language)
+    for line_index, tokens in enumerate(highlighted_lines[:18]):
+        paragraph = frame.paragraphs[0] if line_index == 0 else frame.add_paragraph()
+        paragraph.space_after = Pt(0)
+        paragraph.line_spacing = 0.9
+        if not tokens:
+            run = paragraph.add_run()
+            run.text = " "
+            run.font.size = Pt(12)
+            run.font.name = "Consolas"
+            continue
+        for text, color in tokens:
+            run = paragraph.add_run()
+            run.text = text
+            run.font.size = Pt(12)
+            run.font.name = "Consolas"
+            run.font.color.rgb = color
+
+
+def _highlight_code(code: str, language: str) -> list[list[tuple[str, RGBColor]]]:
+    try:
+        lexer = get_lexer_by_name(language)
+    except Exception:
+        lexer = TextLexer()
+
+    lines: list[list[tuple[str, RGBColor]]] = [[]]
+    for token_type, value in lex(code, lexer):
+        color = _token_color(token_type)
+        parts = value.split("\n")
+        for index, part in enumerate(parts):
+            if index:
+                lines.append([])
+            if part:
+                lines[-1].append((part, color))
+    return lines
+
+
+def _token_color(token_type) -> RGBColor:
+    if token_type in Keyword or token_type in Name.Builtin:
+        return RGBColor(125, 211, 252)
+    if token_type in String:
+        return RGBColor(134, 239, 172)
+    if token_type in Number:
+        return RGBColor(253, 186, 116)
+    if token_type in Comment:
+        return RGBColor(148, 163, 184)
+    if token_type in Name.Function or token_type in Name.Class:
+        return RGBColor(196, 181, 253)
+    return RGBColor(226, 232, 240)
 
 
 def _diagram_slots(count: int, layout: str) -> list[dict[str, int]]:

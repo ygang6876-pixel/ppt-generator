@@ -37,6 +37,9 @@ def _render_with_mmdc(code: str, output_path: Path) -> Path:
     source_path = output_path.with_suffix(".mmd")
     source_path.write_text(code, encoding="utf-8")
     command = [mmdc, "-i", str(source_path), "-o", str(output_path), "-b", "transparent"]
+    puppeteer_config = Path.cwd() / "puppeteer-config.json"
+    if puppeteer_config.exists():
+        command.extend(["-p", str(puppeteer_config)])
     result = subprocess.run(command, capture_output=True, text=True, timeout=60)
     if result.returncode != 0 or not output_path.exists():
         raise MermaidRenderError(result.stderr or result.stdout)

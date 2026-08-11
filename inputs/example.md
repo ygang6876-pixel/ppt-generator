@@ -47,6 +47,19 @@ flowchart LR
   F --> G
 ```
 
+<!-- layout: code -->
+## 代码高亮
+
+```python
+from pathlib import Path
+
+def generate_ppt(markdown_path: Path) -> str:
+    deck = parse_markdown(markdown_path.read_text(encoding="utf-8"))
+    output = markdown_path.with_suffix(".pptx")
+    build_presentation(deck, output)
+    return str(output)
+```
+
 <!-- layout: metrics -->
 ## 项目指标
 

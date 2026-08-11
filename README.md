@@ -22,6 +22,9 @@
 - 支持页面布局指令：`text`、`image-right`、`image-left`、`full-table`
 - 支持可视化模板：`cards`、`compare`、`timeline`、`metrics`、`summary`
 - 支持 Mermaid 流程图、关系图渲染到 PPT
+- 支持 Markdown 代码块高亮
+- 提供 `/api/preview` 和 `/api/generate` 接口
+- 提供 Dockerfile 便于部署
 - 支持网页上传、粘贴内容、选择主题、自定义导出文件名
 - 支持生成前预览 PPT 结构
 - 支持多张图片上传，并自动生成图片展示型 PPT
@@ -219,6 +222,35 @@ flowchart LR
 - Mermaid CLI 需要本机有可用的 Chrome / Edge 浏览器环境。
 - 如果图表无法渲染，请检查 Mermaid 语法，确认已执行 `npm install`，并确认浏览器可用。
 
+## 代码块高亮
+
+Markdown 代码块会自动转成带背景和语法高亮的 PPT 页面：
+
+````markdown
+<!-- layout: code -->
+## 代码示例
+
+```python
+def hello(name: str) -> str:
+    return f"Hello, {name}"
+```
+````
+
+## API 与 Docker
+
+API 使用说明见：
+
+```text
+docs/API.md
+```
+
+Docker 部署：
+
+```bash
+docker build -t ppt-generator .
+docker run --rm -p 5000:5000 ppt-generator
+```
+
 ## 图片生成 PPT
 
 网页中可以直接多选上传图片：
@@ -262,5 +294,4 @@ ppt-generator/
 
 ## 后续计划
 
-- 支持代码块高亮
-- 增加 API 文档和 Docker 部署
+- 增加更多 Docker/生产环境配置

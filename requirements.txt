@@ -2,3 +2,4 @@ python-pptx>=0.6.23
 Flask>=3.0.0
 python-docx>=1.1.2
 pywin32>=306; platform_system=="Windows"
+Pygments>=2.18.0
