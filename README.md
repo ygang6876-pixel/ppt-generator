@@ -32,7 +32,7 @@ templates, a roadmap, and CI tests to support long-term maintenance.
 - 支持 Markdown 表格转可编辑 PPT 表格
 - 支持顶部配置 `title`、`subtitle`、`theme`、`footer`
 - 支持页面布局指令：`text`、`image-right`、`image-left`、`full-table`
-- 支持可视化模板：`cards`、`compare`、`timeline`、`metrics`、`summary`
+- 支持可视化模板：`agenda`、`highlight`、`overview`、`process`、`risk`、`checklist`、`cards`、`compare`、`timeline`、`metrics`、`summary`
 - 支持 Mermaid 流程图、关系图渲染到 PPT
 - 支持 Markdown 代码块高亮
 - 提供 `/api/preview` 和 `/api/generate` 接口
@@ -155,6 +155,12 @@ footer: PPT Generator
 - `timeline`：时间轴页
 - `metrics`：指标数据页
 - `summary`：总结清单页
+- `agenda`：汇报目录页
+- `highlight`：汇报重点页
+- `overview`：工程概况页
+- `process`：施工流程页
+- `risk`：风险控制页
+- `checklist`：措施清单页
 - `diagram`：Mermaid 图表页
 - `auto`：自动判断
 

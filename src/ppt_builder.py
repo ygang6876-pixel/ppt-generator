@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
@@ -100,7 +101,7 @@ def _add_content_slide(
     _add_background(slide, theme.slide_background)
     _add_slide_title(slide, title, theme)
 
-    content_layout = _resolve_layout(layout, images, tables, mermaid, code_blocks)
+    content_layout = _resolve_layout(title, body, bullets, layout, images, tables, mermaid, code_blocks)
     if code_blocks:
         _add_code_blocks(slide, code_blocks, theme)
         _add_footer(slide, footer_text, theme)
@@ -111,11 +112,11 @@ def _add_content_slide(
         _add_footer(slide, footer_text, theme)
         return
 
-    if content_layout == "image-full":
+    if content_layout in {"image-full", "blueprint"}:
         _add_images(slide, images, image_base_dir, content_layout, theme)
         _add_footer(slide, footer_text, theme)
         return
-    if content_layout in {"cards", "compare", "timeline", "metrics", "summary"}:
+    if content_layout in {"agenda", "cards", "compare", "timeline", "process", "metrics", "summary", "highlight", "risk", "checklist", "overview"}:
         _add_visual_layout(slide, content_layout, body, bullets, theme)
         _add_footer(slide, footer_text, theme)
         return
@@ -157,6 +158,9 @@ def _add_slide_title(slide, title: str, theme: Theme) -> None:
 
 
 def _resolve_layout(
+    title: str,
+    body: list[str],
+    bullets: list[str],
     layout: str,
     images: list[ImageAsset],
     tables: list[Table],
@@ -169,12 +173,19 @@ def _resolve_layout(
         "image-right",
         "image-left",
         "image-full",
+        "blueprint",
         "full-table",
+        "agenda",
         "cards",
         "compare",
         "timeline",
+        "process",
         "metrics",
         "summary",
+        "highlight",
+        "risk",
+        "checklist",
+        "overview",
         "diagram",
         "code",
     }
@@ -188,10 +199,33 @@ def _resolve_layout(
     if tables and not images:
         return "full-table"
     if images and not tables:
-        return "image-full" if len(images) == 1 else "image-right"
+        return "blueprint" if _looks_like_drawing(title) else ("image-full" if len(images) == 1 else "image-right")
     if images:
         return "image-right"
+    return _semantic_layout(title, body, bullets)
+
+
+def _semantic_layout(title: str, body: list[str], bullets: list[str]) -> str:
+    text = " ".join([title, *body[:2], *bullets[:3]])
+    if re.search(r"汇报目录|目录|提纲", title):
+        return "agenda"
+    if re.search(r"汇报重点|重点|结论", title):
+        return "highlight"
+    if re.search(r"风险|危险|坍塌|触电|打击|伤害|爆炸", text):
+        return "risk"
+    if re.search(r"流程|进度|计划|程序|步骤|工序", text):
+        return "process"
+    if re.search(r"职责|措施|保障|应急|验收|标准|管理|控制", text):
+        return "checklist"
+    if re.search(r"工程概况|工程特性|项目概况|施工部署", text):
+        return "overview"
+    if len(body) + len(bullets) <= 4:
+        return "summary"
     return "text"
+
+
+def _looks_like_drawing(title: str) -> bool:
+    return bool(re.search(r"图|布置|示意|断面|设计|流程|网络|参数", title))
 
 
 def _text_box_rect(layout: str, has_tables: bool) -> tuple[int, int, int, int]:
@@ -233,16 +267,43 @@ def _add_text_content(slide, body: list[str], bullets: list[str], left: int, top
 
 def _add_visual_layout(slide, layout: str, body: list[str], bullets: list[str], theme: Theme) -> None:
     items = [*body, *bullets] or [" "]
-    if layout == "cards":
+    if layout == "agenda":
+        _add_agenda_layout(slide, items, theme)
+    elif layout == "cards":
         _add_cards_layout(slide, items, theme)
     elif layout == "compare":
         _add_compare_layout(slide, items, theme)
     elif layout == "timeline":
         _add_timeline_layout(slide, items, theme)
+    elif layout == "process":
+        _add_process_layout(slide, items, theme)
     elif layout == "metrics":
         _add_metrics_layout(slide, items, theme)
     elif layout == "summary":
         _add_summary_layout(slide, items, theme)
+    elif layout == "highlight":
+        _add_highlight_layout(slide, items, theme)
+    elif layout == "risk":
+        _add_risk_layout(slide, items, theme)
+    elif layout == "checklist":
+        _add_checklist_layout(slide, items, theme)
+    elif layout == "overview":
+        _add_overview_layout(slide, items, theme)
+
+
+def _add_agenda_layout(slide, items: list[str], theme: Theme) -> None:
+    for index, item in enumerate(_pad_items(items, 5)[:5]):
+        top = Inches(1.65 + index * 0.9)
+        number = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.0), top, Inches(0.62), Inches(0.48))
+        number.fill.solid()
+        number.fill.fore_color.rgb = theme.accent_color
+        number.line.color.rgb = theme.accent_color
+        _add_box_text(slide, f"{index + 1}", Inches(1.0), top + Inches(0.06), Inches(0.62), Inches(0.26), theme, Pt(13), bold=True, color=RGBColor(255, 255, 255), align=PP_ALIGN.CENTER)
+        _add_box_text(slide, item, Inches(1.85), top - Inches(0.02), Inches(8.6), Inches(0.52), theme, Pt(22), bold=True)
+        rule = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.85), top + Inches(0.62), Inches(9.6), Inches(0.02))
+        rule.fill.solid()
+        rule.fill.fore_color.rgb = theme.subtle_fill
+        rule.line.color.rgb = theme.subtle_fill
 
 
 def _add_cards_layout(slide, items: list[str], theme: Theme) -> None:
@@ -296,6 +357,19 @@ def _add_timeline_layout(slide, items: list[str], theme: Theme) -> None:
         _add_box_text(slide, item, x - Inches(0.55), Inches(4.25), Inches(1.75), Inches(1.3), theme, Pt(15), bold=True, align=PP_ALIGN.CENTER)
 
 
+def _add_process_layout(slide, items: list[str], theme: Theme) -> None:
+    for index, item in enumerate(_pad_items(items, 5)[:5]):
+        left = Inches(0.75 + index * 2.5)
+        arrow = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, left, Inches(2.15), Inches(2.15), Inches(1.02))
+        arrow.fill.solid()
+        arrow.fill.fore_color.rgb = theme.accent_color if index == 0 else theme.subtle_fill
+        arrow.line.color.rgb = theme.accent_color
+        color = RGBColor(255, 255, 255) if index == 0 else theme.title_color
+        _add_box_text(slide, f"{index + 1}", left + Inches(0.15), Inches(2.5), Inches(0.35), Inches(0.22), theme, Pt(11), bold=True, color=color, align=PP_ALIGN.CENTER)
+        _add_box_text(slide, _short_text(item, 34), left + Inches(0.48), Inches(2.38), Inches(1.18), Inches(0.42), theme, Pt(13), bold=True, color=color, align=PP_ALIGN.CENTER)
+        _add_box_text(slide, _short_text(item, 62), left - Inches(0.05), Inches(3.65), Inches(1.9), Inches(0.95), theme, Pt(14), align=PP_ALIGN.CENTER)
+
+
 def _add_metrics_layout(slide, items: list[str], theme: Theme) -> None:
     positions = [
         (Inches(0.9), Inches(1.8)),
@@ -322,6 +396,71 @@ def _add_summary_layout(slide, items: list[str], theme: Theme) -> None:
         badge.fill.fore_color.rgb = theme.accent_color
         badge.line.color.rgb = theme.accent_color
         _add_box_text(slide, item, Inches(1.55), top - Inches(0.03), Inches(10.3), Inches(0.48), theme, Pt(19), bold=index == 0)
+
+
+def _add_highlight_layout(slide, items: list[str], theme: Theme) -> None:
+    hero = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.85), Inches(1.6), Inches(3.1), Inches(4.85))
+    hero.fill.solid()
+    hero.fill.fore_color.rgb = theme.table_header
+    hero.line.color.rgb = theme.table_header
+    _add_box_text(slide, "KEY", Inches(1.15), Inches(2.0), Inches(2.4), Inches(0.5), theme, Pt(26), bold=True, color=RGBColor(255, 255, 255), align=PP_ALIGN.CENTER)
+    _add_box_text(slide, "POINTS", Inches(1.15), Inches(2.75), Inches(2.4), Inches(0.5), theme, Pt(26), bold=True, color=theme.accent_color, align=PP_ALIGN.CENTER)
+    for index, item in enumerate(items[:5]):
+        top = Inches(1.65 + index * 0.92)
+        _add_box_text(slide, f"{index + 1:02d}", Inches(4.55), top, Inches(0.55), Inches(0.34), theme, Pt(13), bold=True, color=theme.accent_color)
+        _add_box_text(slide, _short_text(item, 105), Inches(5.25), top - Inches(0.03), Inches(6.6), Inches(0.58), theme, Pt(18), bold=index == 0)
+
+
+def _add_risk_layout(slide, items: list[str], theme: Theme) -> None:
+    positions = [
+        (Inches(0.85), Inches(1.65)),
+        (Inches(6.85), Inches(1.65)),
+        (Inches(0.85), Inches(4.0)),
+        (Inches(6.85), Inches(4.0)),
+    ]
+    labels = ["风险点", "控制措施", "责任要求", "检查验收"]
+    for index, item in enumerate(_pad_items(items, 4)[:4]):
+        left, top = positions[index]
+        panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, Inches(5.45), Inches(1.75))
+        panel.fill.solid()
+        panel.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        panel.line.color.rgb = theme.accent_color
+        tag = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, Inches(1.25), Inches(0.34))
+        tag.fill.solid()
+        tag.fill.fore_color.rgb = theme.accent_color
+        tag.line.color.rgb = theme.accent_color
+        _add_box_text(slide, labels[index], left + Inches(0.1), top + Inches(0.06), Inches(1.05), Inches(0.18), theme, Pt(9), bold=True, color=RGBColor(255, 255, 255), align=PP_ALIGN.CENTER)
+        _add_box_text(slide, _short_text(item, 95), left + Inches(0.25), top + Inches(0.55), Inches(4.85), Inches(0.8), theme, Pt(16), bold=True)
+
+
+def _add_checklist_layout(slide, items: list[str], theme: Theme) -> None:
+    for index, item in enumerate(items[:6]):
+        top = Inches(1.62 + index * 0.78)
+        panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.95), top, Inches(11.1), Inches(0.56))
+        panel.fill.solid()
+        panel.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        panel.line.color.rgb = theme.subtle_fill
+        box = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.18), top + Inches(0.15), Inches(0.24), Inches(0.24))
+        box.fill.solid()
+        box.fill.fore_color.rgb = theme.accent_color
+        box.line.color.rgb = theme.accent_color
+        _add_box_text(slide, _short_text(item, 105), Inches(1.65), top + Inches(0.08), Inches(9.75), Inches(0.32), theme, Pt(16), bold=index == 0)
+
+
+def _add_overview_layout(slide, items: list[str], theme: Theme) -> None:
+    positions = [
+        (Inches(0.95), Inches(1.65), Inches(3.3), Inches(2.0)),
+        (Inches(4.65), Inches(1.65), Inches(3.3), Inches(2.0)),
+        (Inches(8.35), Inches(1.65), Inches(3.3), Inches(2.0)),
+        (Inches(0.95), Inches(4.05), Inches(10.7), Inches(1.65)),
+    ]
+    for index, item in enumerate(_pad_items(items, 4)[:4]):
+        left, top, width, height = positions[index]
+        panel = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+        panel.fill.solid()
+        panel.fill.fore_color.rgb = theme.subtle_fill if index < 3 else RGBColor(255, 255, 255)
+        panel.line.color.rgb = theme.accent_color if index == 0 else theme.subtle_fill
+        _add_box_text(slide, _short_text(item, 120), left + Inches(0.25), top + Inches(0.28), width - Inches(0.5), height - Inches(0.45), theme, Pt(16 if index < 3 else 18), bold=index == 0)
 
 
 def _add_box_text(
@@ -374,21 +513,35 @@ def _split_metric(item: str) -> tuple[str, str]:
     return item, "指标说明"
 
 
+def _short_text(text: str, limit: int) -> str:
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}..."
+
+
 def _add_table(slide, table_data: Table, left: int, top: int, width: int, height: int, theme: Theme) -> None:
-    row_count = len(table_data.rows) + 1
-    col_count = len(table_data.headers)
+    max_rows = 10
+    max_cols = 8
+    headers = table_data.headers[:max_cols]
+    rows = [row[:max_cols] for row in table_data.rows[:max_rows]]
+    row_count = len(rows) + 1
+    col_count = len(headers)
     table_shape = slide.shapes.add_table(row_count, col_count, left, top, width, height)
     table = table_shape.table
 
-    for col_idx, header in enumerate(table_data.headers):
-        _set_cell(table.cell(0, col_idx), header, theme, is_header=True)
+    for col_idx, header in enumerate(headers):
+        _set_cell(table.cell(0, col_idx), _short_text(header, 18), theme, is_header=True, dense=col_count > 5)
 
-    for row_idx, row in enumerate(table_data.rows, start=1):
+    for row_idx, row in enumerate(rows, start=1):
         for col_idx, value in enumerate(row):
-            _set_cell(table.cell(row_idx, col_idx), value, theme, is_header=False)
+            _set_cell(table.cell(row_idx, col_idx), _short_text(value, 34), theme, is_header=False, dense=row_count > 7 or col_count > 5)
+
+    if len(table_data.rows) > max_rows:
+        _add_box_text(slide, f"仅展示前 {max_rows} 行，完整表格请查看源文档", left, top + height + Inches(0.08), width, Inches(0.2), theme, Pt(9), color=theme.footer_color, align=PP_ALIGN.RIGHT)
 
 
-def _set_cell(cell, text: str, theme: Theme, is_header: bool) -> None:
+def _set_cell(cell, text: str, theme: Theme, is_header: bool, dense: bool = False) -> None:
     cell.text = text
     cell.margin_left = Inches(0.06)
     cell.margin_right = Inches(0.06)
@@ -403,7 +556,7 @@ def _set_cell(cell, text: str, theme: Theme, is_header: bool) -> None:
         paragraph.alignment = PP_ALIGN.CENTER
         for run in paragraph.runs:
             run.font.name = theme.body_font
-            run.font.size = Pt(12 if is_header else 11)
+            run.font.size = Pt(10 if dense else (12 if is_header else 11))
             run.font.bold = is_header
             run.font.color.rgb = RGBColor(255, 255, 255) if is_header else theme.body_color
 
@@ -553,6 +706,8 @@ def _diagram_slots(count: int, layout: str) -> list[dict[str, int]]:
 
 
 def _image_slots(count: int, layout: str) -> list[dict[str, int]]:
+    if layout == "blueprint":
+        return [{"left": Inches(0.65), "top": Inches(1.42), "width": Inches(12.0), "height": Inches(5.25)}]
     if layout == "image-full":
         return [{"left": Inches(0.85), "top": Inches(1.55), "width": Inches(11.65), "height": Inches(4.95)}]
     left = Inches(0.95) if layout == "image-left" else Inches(7.0)

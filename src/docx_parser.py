@@ -407,14 +407,14 @@ def _build_intro_slide(slides: list[Slide]) -> Slide | None:
             break
     if not facts:
         return None
-    return Slide(title="汇报重点", bullets=facts[:5], layout="summary")
+    return Slide(title="汇报重点", bullets=facts[:5], layout="highlight")
 
 
 def _build_agenda_slide(slides: list[Slide]) -> Slide | None:
     items = [name for name, pattern in REPORT_SECTIONS if any(_matches(slide, pattern) for slide in slides)]
     if not items:
         return None
-    return Slide(title="汇报目录", bullets=items[:5], layout="cards")
+    return Slide(title="汇报目录", bullets=items[:5], layout="agenda")
 
 
 def _matches(slide: Slide, pattern: str) -> bool:
@@ -430,11 +430,15 @@ def _style_report_slide(slide: Slide) -> Slide:
     if slide.tables:
         layout = "full-table"
     elif slide.images:
-        layout = "image-full" if len(slide.images) == 1 else "image-right"
+        layout = "blueprint" if _looks_like_drawing(title) else ("image-full" if len(slide.images) == 1 else "image-right")
     elif re.search(r"流程|进度|计划|步骤|程序", title):
-        layout = "timeline"
-    elif re.search(r"风险|危险|措施|目标|职责|保障", title):
-        layout = "cards"
+        layout = "process"
+    elif re.search(r"风险|危险|坍塌|触电|打击|伤害|爆炸", title):
+        layout = "risk"
+    elif re.search(r"措施|目标|职责|保障|应急|验收|标准|管理|控制", title):
+        layout = "checklist"
+    elif re.search(r"工程概况|工程特性|项目概况|施工部署", title):
+        layout = "overview"
     elif len(body) + len(bullets) <= 4:
         layout = "summary"
     return Slide(
@@ -453,3 +457,7 @@ def _clean_report_title(title: str) -> str:
     title = _clean_text(title)
     title = re.sub(r"^\d+(\.\d+)*\s*", "", title)
     return title or "内容"
+
+
+def _looks_like_drawing(title: str) -> bool:
+    return bool(re.search(r"图|布置|示意|断面|设计|流程|网络|参数", title))
