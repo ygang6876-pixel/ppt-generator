@@ -40,6 +40,7 @@ templates, a roadmap, and CI tests to support long-term maintenance.
 - 支持网页上传、粘贴内容、选择主题、自定义导出文件名
 - 支持生成前预览 PPT 结构
 - 支持多张图片上传，并自动生成图片展示型 PPT
+- Word/WPS 文档支持“汇报版”和“详细版”两种生成模式
 - 支持命令行生成
 
 ## 快速开始
@@ -84,6 +85,11 @@ http://127.0.0.1:5000
 - 尝试自动转换：`.doc`、`.wps`
 
 说明：`.doc` 和 `.wps` 会先自动转换为 `.docx`，再生成 PPT。自动转换需要本机安装 LibreOffice，或安装 Microsoft Word 并具备 Windows 自动化能力。如果转换失败，请先在 WPS/Word 中另存为 `.docx` 后再上传。
+
+Word/WPS 生成模式：
+
+- `汇报版`：适合施工方案、技术方案、汇报材料等长文档，会自动压缩页数、筛选重点章节、保留关键图表，并生成汇报重点和汇报目录。
+- `详细版`：保留更多原文结构，适合需要逐章检查或完整转换的场景。
 
 ## Markdown 写法
 

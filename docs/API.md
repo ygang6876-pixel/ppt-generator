@@ -61,6 +61,7 @@ POST /api/generate
 | `image_files` | file[] | 可选，可上传多张图片 |
 | `content_text` | text | 可选，未上传文件时使用 |
 | `theme` | text | 可选，`auto`、`business`、`clean`、`dark`、`midnight`、`emerald`、`sunrise`、`ivory`、`tech`、`construction` |
+| `docx_mode` | text | 可选，Word 文档生成模式：`brief` 汇报版，`detail` 详细版 |
 | `footer` | text | 可选，页脚文字 |
 | `output_name` | text | 可选，导出文件名 |
 

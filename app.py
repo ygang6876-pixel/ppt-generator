@@ -28,6 +28,7 @@ TEXT = {
     "output_label": "\u5bfc\u51fa\u6587\u4ef6\u540d",
     "output_hint": "\u4e0d\u7528\u8f93\u5165 .pptx \u540e\u7f00\uff0c\u7cfb\u7edf\u4f1a\u81ea\u52a8\u8865\u4e0a\u3002",
     "theme_label": "\u4e3b\u9898\u98ce\u683c",
+    "docx_mode_label": "Word \u751f\u6210\u6a21\u5f0f",
     "button": "\u751f\u6210 PPT",
     "preview_button": "\u9884\u89c8\u7ed3\u6784",
     "preview_title": "\u751f\u6210\u9884\u89c8",
@@ -284,6 +285,13 @@ PAGE = """
               <option value="construction">Construction</option>
             </select>
           </div>
+          <div>
+            <label for="docx_mode">{{ text.docx_mode_label }}</label>
+            <select id="docx_mode" name="docx_mode">
+              <option value="brief">汇报版</option>
+              <option value="detail">详细版</option>
+            </select>
+          </div>
         </div>
         <div class="actions">
           <button type="submit" formaction="/preview">{{ text.preview_button }}</button>
@@ -427,6 +435,8 @@ def _render_page(error: str | None = None, preview: dict | None = None, status_c
 def _load_deck(uploaded_file, image_files, temp_path: Path):
     image_dir = temp_path / "images"
     saved_images = _save_images(image_files, image_dir)
+    docx_mode = request.form.get("docx_mode", "brief")
+    docx_mode = "detail" if docx_mode == "detail" else "brief"
 
     if uploaded_file and uploaded_file.filename:
         filename = Path(uploaded_file.filename)
@@ -434,10 +444,10 @@ def _load_deck(uploaded_file, image_files, temp_path: Path):
         saved_path = temp_path / filename.name
         uploaded_file.save(saved_path)
         if suffix == ".docx":
-            return parse_docx(saved_path), temp_path
+            return parse_docx(saved_path, mode=docx_mode), temp_path
         if suffix in {".doc", ".wps"}:
             converted_path = convert_to_docx(saved_path, temp_path)
-            return parse_docx(converted_path), temp_path
+            return parse_docx(converted_path, mode=docx_mode), temp_path
         if suffix in {".md", ".markdown", ".txt"}:
             markdown_text = saved_path.read_text(encoding="utf-8-sig")
             _validate_text(markdown_text)
