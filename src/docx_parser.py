@@ -9,6 +9,7 @@ from docx.oxml.ns import qn
 from docx.table import Table as DocxTable
 from docx.text.paragraph import Paragraph
 
+from .content_distiller import distill_slide_items, summarize_table_for_report
 from .markdown_parser import Deck, ImageAsset, Slide, Table
 
 
@@ -430,7 +431,7 @@ def _style_report_slide(slide: Slide) -> Slide:
     if slide.tables:
         table = slide.tables[0]
         if _is_complex_table(table):
-            body, bullets = _summarize_table(table)
+            body, bullets = summarize_table_for_report(table.headers, table.rows)
             layout = "checklist"
             return Slide(
                 title=title,
@@ -455,6 +456,7 @@ def _style_report_slide(slide: Slide) -> Slide:
         layout = "overview"
     elif len(body) + len(bullets) <= 4:
         layout = "summary"
+    body, bullets = distill_slide_items(title, body, bullets, layout)
     return Slide(
         title=title,
         body=body,
@@ -483,16 +485,3 @@ def _is_complex_table(table: Table) -> bool:
 
 def _table_text_length(table: Table) -> int:
     return sum(len(cell) for cell in table.headers) + sum(len(cell) for row in table.rows for cell in row)
-
-
-def _summarize_table(table: Table) -> tuple[list[str], list[str]]:
-    rows = len(table.rows)
-    cols = len(table.headers)
-    headers = "、".join(_shorten(header, 10) for header in table.headers[:6])
-    body = [f"源表格为 {rows} 行、{cols} 列；汇报版仅提取字段和代表性内容，避免压缩后失真。"]
-    bullets = [f"主要字段：{headers}"]
-    for row in table.rows[:3]:
-        values = [value for value in row[:3] if value]
-        if values:
-            bullets.append(_shorten(" / ".join(values), 56))
-    return body, bullets[:4]
